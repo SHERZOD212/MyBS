@@ -7,6 +7,5 @@ router = DefaultRouter()
 router.register(r'buses', BusViewSet, basename='bus') # 'buses' endpointi uchun
 
 urlpatterns = [
-    # API marshrutlarini ulash (Rasmdagi kabi v1 strukturasi uchun)
-    path('api/v1/', include(router.urls)),
+    path('', include(router.urls)),
 ]
