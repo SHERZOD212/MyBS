@@ -1,8 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import User
-from django.db.models import Model
 from django.db.models.fields import CharField, BooleanField, TimeField, IntegerField, DateField
-
 from django.db.models import Model,ForeignKey,SET_NULL,CASCADE,TextChoices
 
 # 1. Avtobuslar modeli
@@ -49,25 +46,20 @@ class DailyTripLog(Model):
 
 
 # 4. Texnik holat (Tires, Brakes, Oil)
-from django.db.models import TextChoices
-
-
-class TechnicalCategory(TextChoices):
-    TIRES = 'tires', 'Shinalar (Tires)'
-    BRAKES = 'brakes', 'Tormoz (Brakes)'
-    OIL = 'oil', 'Moy / Antifriz (Oil)'
-    ENGINE = 'engine', 'Dvigatel (Engine)'
-    BATTERY = 'battery', 'Akkumulyator (Battery)'
-
-
-class TechnicalStatusChoice(TextChoices):
-    OK = 'ok', 'Yaxshi (OK)'
-    WARNING = 'warn', 'Ogohlantirish (Warning)'
-    DANGER = 'danger', 'Xavfli (Danger)'
-    REPAIR = 'repair', 'Ta’mir talab'
-
-
 class TechnicalStatus(Model):
+    class TechnicalCategory(TextChoices):
+        TIRES = 'tires', 'Shinalar (Tires)'
+        BRAKES = 'brakes', 'Tormoz (Brakes)'
+        OIL = 'oil', 'Moy / Antifriz (Oil)'
+        ENGINE = 'engine', 'Dvigatel (Engine)'
+        BATTERY = 'battery', 'Akkumulyator (Battery)'
+
+    class TechnicalStatusChoice(TextChoices):
+        OK = 'ok', 'Yaxshi (OK)'
+        WARNING = 'warn', 'Ogohlantirish (Warning)'
+        DANGER = 'danger', 'Xavfli (Danger)'
+        REPAIR = 'repair', 'Ta’mir talab'
+
     bus = ForeignKey('apps.Bus',on_delete=CASCADE,related_name='tech_statuses')
     category = CharField(max_length=20,choices=TechnicalCategory.choices)
     last_service_date = DateField(verbose_name="Oxirgi texnik ko'rik sanasi")
@@ -84,7 +76,7 @@ class TechnicalStatus(Model):
 
 # 5. Texnik xizmat ko'rsatish rejasi (Maintenance Schedule)
 class MaintenanceSchedule(Model):
-    bus = ForeignKey(Bus, on_delete=CASCADE, related_name='maintenance_schedules')
+    bus = ForeignKey('apps.Bus', on_delete=CASCADE, related_name='maintenance_schedules')
     maintenance_type = CharField(max_length=100, verbose_name="Xizmat turi (TO-1, TO-2...)")
     planned_date = DateField(verbose_name="Rejalashtirilgan sana")
     days_remaining = IntegerField(
@@ -92,3 +84,4 @@ class MaintenanceSchedule(Model):
 
     def __str__(self):
         return f"{self.bus.num} - {self.maintenance_type}"
+#fdsfds
