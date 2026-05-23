@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>АвтоПарк — Выход из системы</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root[data-theme="dark"] {
+    --bg: #0d0f12;
+    --bg2: #13161c;
+    --border: rgba(255,255,255,0.08);
+    --accent: #f5a623;
+    --text: #e8e6e0;
+    --muted: #7a7870;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f5f7;
+    --bg2: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --accent: #e67e22;
+    --text: #1a1a1a;
+    --muted: #626567;
+  }
+  :root {
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --display: 'Bebas Neue', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  .logout-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 100%;
+    max-width: 400px;
+    padding: 40px 32px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    text-align: center;
+    position: relative;
+  }
+
+  .logout-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--muted);
+    border-radius: 6px 6px 0 0;
+  }
+
+  .icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .title {
+    font-family: var(--display);
+    font-size: 32px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .message {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .redirect-notice {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .btn-back {
+    display: inline-block;
+    margin-top: 24px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--muted);
+    transition: color 0.2s;
+  }
+  .btn-back:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<div class="logout-card">
+  <span class="icon">🔒</span>
+  <div class="title">ВЫХОД ВЫПОЛНЕН</div>
+  <div class="message">Вы успешно вышли из своей учетной записи. Сессия безопасности завершена.</div>
+
+  <div class="redirect-notice">Перенаправление на страницу входа...</div>
+
+  <a href="/login/" class="btn-back">Войти снова вручную</a>
+</div>
+
+<script>
+  // Считываем тему
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  // Автоматический редирект на логин через 3 секунды
+  setTimeout(() => {
+    window.location.href = '/login/';
+  }, 3000);
+</script>
+</body>
+</html>
