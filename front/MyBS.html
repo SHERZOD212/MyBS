@@ -1,568 +1,11 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Bus Station</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  /* Переменные для ТЕМНОЙ темы (по умолчанию) */
-  :root[data-theme="dark"] {
-    --bg: #0d0f12;
-    --bg2: #13161c;
-    --bg3: #1a1e26;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.15);
-    --accent: #f5a623;
-    --accent2: #e8432d;
-    --green: #2ecc71;
-    --yellow: #f5a623;
-    --red: #e8432d;
-    --text: #e8e6e0;
-    --muted: #7a7870;
-  }
-
-  /* Переменные для СВЕТЛОЙ темы */
-  :root[data-theme="light"] {
-    --bg: #f4f5f7;
-    --bg2: #ffffff;
-    --bg3: #f0f2f5;
-    --border: rgba(0,0,0,0.08);
-    --border2: rgba(0,0,0,0.15);
-    --accent: #e67e22;
-    --accent2: #d35400;
-    --green: #27ae60;
-    --yellow: #f39c12;
-    --red: #c0392b;
-    --text: #1a1a1a;
-    --muted: #626567;
-  }
-
-  :root {
-    --mono: 'IBM Plex Mono', monospace;
-    --sans: 'IBM Plex Sans', sans-serif;
-    --display: 'Bebas Neue', sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-    transition: background 0.3s, color 0.3s;
-  }
-
-  /* TOP BAR */
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 32px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    transition: background 0.3s, border-color 0.3s;
-  }
-  .logo {
-    font-family: var(--display);
-    font-size: 26px;
-    letter-spacing: 3px;
-    color: var(--accent);
-  }
-  .logo span { color: var(--text); }
-
-  .topbar-right-wrap {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-  .topbar-right {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    text-align: right;
-    line-height: 1.6;
-  }
-  #live-clock { color: var(--accent); font-size: 16px; font-weight: 500; }
-
-  /* Кнопка переключения темы */
-  .theme-toggle-btn {
-    background: var(--bg3);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: var(--mono);
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.2s;
-  }
-  .theme-toggle-btn:hover {
-    border-color: var(--accent);
-  }
-
-  /* ===== LOGIN SYSTEM STYLES ===== */
-  .login-btn {
-    background: transparent;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 500;
-    transition: all 0.2s;
-  }
-  .login-btn:hover {
-    background: var(--accent);
-    color: var(--bg2);
-  }
-
-  /* Full screen block for non-authenticated users */
-  .auth-screen-overlay {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 60px 20px;
-    min-height: calc(100vh - 70px);
-  }
-
-  .login-card {
-    background: var(--bg2);
-    border: 1px solid var(--border2);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    border-radius: 8px;
-    padding: 30px;
-    width: 100%;
-    max-width: 360px;
-    border-top: 4px solid var(--accent);
-    text-align: left;
-    animation: fadeIn 0.3s ease;
-  }
-  .login-card h3 {
-    font-family: var(--sans);
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: var(--text);
-  }
-  .login-card p {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 20px;
-  }
-  .input-group {
-    margin-bottom: 16px;
-    text-align: left;
-  }
-  .input-group label {
-    display: block;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-  }
-  .input-group input {
-    width: 100%;
-    background: var(--bg3);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
-    padding: 10px 14px;
-    border-radius: 4px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .input-group input:focus {
-    border-color: var(--accent);
-  }
-  .submit-btn {
-    width: 100%;
-    background: var(--accent);
-    color: #000;
-    font-weight: 600;
-    border: none;
-    padding: 12px;
-    font-family: var(--mono);
-    font-size: 13px;
-    text-transform: uppercase;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-top: 6px;
-    transition: background 0.2s;
-  }
-  .submit-btn:hover {
-    background: var(--accent2);
-    color: #fff;
-  }
-
-  /* Xatolik xabari uchun stil */
-  .error-message {
-    background: rgba(232, 67, 45, 0.1);
-    border: 1px solid var(--red);
-    color: var(--red);
-    padding: 10px;
-    border-radius: 4px;
-    font-size: 13px;
-    margin-bottom: 16px;
-    display: none; /* Dastlab yashirin */
-    font-family: var(--sans);
-  }
-
-  /* NAV */
-  .nav-wrap {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 0 32px;
-    display: none;
-    gap: 0;
-    transition: background 0.3s, border-color 0.3s;
-  }
-  .nav-btn {
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 14px 24px;
-    background: transparent;
-    border: none;
-    border-bottom: 3px solid transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all .2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .nav-btn:hover { color: var(--text); }
-  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .nav-btn .icon { font-size: 16px; }
-
-  /* LAYOUT */
-  .main { padding: 28px 32px; max-width: 1200px; display: none; }
-  .page { display: none; }
-  .page.active { display: block; animation: fadeIn .25s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* PAGE HEADER */
-  .page-header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .page-title {
-    font-family: var(--display);
-    font-size: 42px;
-    letter-spacing: 2px;
-    line-height: 1;
-    color: var(--text);
-  }
-  .page-title span { color: var(--accent); }
-  .page-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-top: 4px; }
-
-  /* CONTROLS BAR */
-  .controls {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .ctrl-label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
-  .ctrl-input, .ctrl-select {
-    background: var(--bg3);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 8px 14px;
-    border-radius: 4px;
-    outline: none;
-    cursor: pointer;
-    transition: border-color .2s, background .3s, color .3s;
-  }
-  .ctrl-input:focus, .ctrl-select:focus { border-color: var(--accent); }
-  .ctrl-select option { background: var(--bg2); }
-  .view-toggle {
-    display: flex;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .vt-btn {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 8px 16px;
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .vt-btn.active { background: var(--accent); color: #000; font-weight: 600; }
-
-  /* METRICS GRID */
-  .metrics {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 24px;
-  }
-  .metric-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 18px 20px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color .2s, background .3s;
-  }
-  .metric-card:hover { border-color: var(--border2); }
-  .metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 3px; height: 100%;
-    background: var(--accent);
-  }
-  .metric-card.green::before { background: var(--green); }
-  .metric-card.red::before { background: var(--red); }
-  .metric-card.muted::before { background: var(--muted); }
-  .metric-lbl { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .metric-val { font-family: var(--display); font-size: 44px; line-height: 1; letter-spacing: 1px; }
-  .metric-val.green { color: var(--green); }
-  .metric-val.amber { color: var(--accent); }
-  .metric-val.red { color: var(--red); }
-  .metric-val.white { color: var(--text); }
-
-  /* DATA TABLE */
-  .table-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 20px;
-    transition: background .3s, border-color .3s;
-  }
-  .table-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .table-title { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th {
-    text-align: left;
-    padding: 10px 16px;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-    background: var(--bg3);
-    transition: background .3s, border-color .3s;
-  }
-  td {
-    padding: 13px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-    vertical-align: middle;
-    transition: background .3s, border-color .3s;
-  }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.02); }
-  :root[data-theme="light"] tr:hover td { background: rgba(0,0,0,0.02); }
-  .mono { font-family: var(--mono); }
-
-  /* BADGES */
-  .badge {
-    display: inline-block;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 1px;
-    padding: 3px 9px;
-    border-radius: 3px;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-  .b-green { background: rgba(46,204,113,0.12); color: var(--green); border: 1px solid rgba(46,204,113,0.25); }
-  .b-amber { background: rgba(245,166,35,0.12); color: var(--accent); border: 1px solid rgba(245,166,35,0.25); }
-  .b-red   { background: rgba(232,67,45,0.12); color: var(--red); border: 1px solid rgba(232,67,45,0.25); }
-  .b-blue  { background: rgba(52,152,219,0.12); color: #3498db; border: 1px solid rgba(52,152,219,0.25); }
-  :root[data-theme="light"] .b-blue { color: #2980b9; border-color: rgba(52,152,219,0.4); }
-
-  /* BUS NUM */
-  .bus-num {
-    font-family: var(--mono);
-    font-size: 12px;
-    background: var(--bg3);
-    border: 1px solid var(--border2);
-    border-radius: 3px;
-    padding: 3px 8px;
-    letter-spacing: 1px;
-    transition: background .3s, border-color .3s;
-  }
-
-  /* DAY BADGE */
-  .day-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 5px 12px;
-    border-radius: 20px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .day-even { background: rgba(52,152,219,0.15); color: #5dade2; border: 1px solid rgba(52,152,219,0.3); }
-  :root[data-theme="light"] .day-even { color: #2980b9; }
-  .day-odd  { background: rgba(245,166,35,0.15); color: var(--accent); border: 1px solid rgba(245,166,35,0.3); }
-  .day-black { background: rgba(232,67,45,0.15); color: var(--red); border: 1px solid rgba(232,67,45,0.3); }
-
-  /* DRIVER CARD */
-  .driver-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
-  .driver-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 18px 20px;
-    transition: border-color .25s, transform .2s, background .3s;
-    cursor: default;
-  }
-  .driver-card:hover { border-color: var(--border2); transform: translateY(-2px); }
-  .driver-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
-  .driver-avatar {
-    width: 44px; height: 44px;
-    border-radius: 50%;
-    background: var(--bg3);
-    border: 1px solid var(--border2);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--display);
-    font-size: 18px;
-    letter-spacing: 1px;
-    color: var(--accent);
-    flex-shrink: 0;
-    transition: background .3s, border-color .3s;
-  }
-  .driver-name { font-weight: 600; font-size: 15px; margin-bottom: 3px; }
-  .driver-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .driver-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-  .driver-row { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--border); font-size: 12px; margin-top: 10px; }
-  .driver-row-lbl { color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .5px; }
-
-  /* TECH SUBTABS */
-  .subtabs { display: flex; gap: 8px; margin-bottom: 20px; }
-  .stab {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 7px 16px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .stab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
-  .stab:hover:not(.active) { border-color: var(--border2); color: var(--text); }
-  .tech-section { display: none; }
-  .tech-section.active { display: block; animation: fadeIn .2s ease; }
-
-  /* TECH ITEM */
-  .tech-item {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 18px 20px;
-    margin-bottom: 12px;
-    transition: border-color .2s, background .3s;
-  }
-  .tech-item:hover { border-color: var(--border2); }
-  .tech-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .tech-bus { display: flex; align-items: center; gap: 10px; }
-  .tech-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .tech-info { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 10px; display: flex; gap: 20px; flex-wrap: wrap; }
-  .progress-bar {
-    height: 4px;
-    background: var(--bg3);
-    border-radius: 2px;
-    overflow: hidden;
-    transition: background .3s;
-  }
-  .progress-fill { height: 100%; border-radius: 2px; transition: width .8s cubic-bezier(.4,0,.2,1); }
-
-  /* SCHEDULE CARDS */
-  .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-  .sched-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 18px 20px;
-    transition: border-color .2s, background .3s;
-  }
-  .sched-urgent { border-color: rgba(232,67,45,0.4); }
-  .sched-warn   { border-color: rgba(245,166,35,0.35); }
-  .sched-ok     { border-color: rgba(46,204,113,0.2); }
-  .sched-days {
-    font-family: var(--display);
-    font-size: 52px;
-    line-height: 1;
-    margin: 8px 0 4px;
-  }
-  .sched-type { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-  .sched-date { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 6px; }
-
-  /* MONTH TABLE */
-  .month-summary { display: none; }
-  .month-summary.active { display: block; animation: fadeIn .2s ease; }
-  .day-summary.active { display: block; animation: fadeIn .2s ease; }
-  .day-summary { display: none; }
-
-  /* DIVIDER */
-  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
-
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-  /* RESPONSIVE */
-  @media (max-width: 768px) {
-    .topbar { padding: 12px 16px; }
-    .topbar-right-wrap { gap: 10px; }
-    .nav-wrap { padding: 0 8px; overflow-x: auto; }
-    .nav-btn { padding: 12px 14px; font-size: 11px; }
-    .main { padding: 18px 16px; }
-    .metrics { grid-template-columns: repeat(2, 1fr); }
-    .page-title { font-size: 30px; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Bus Station</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -576,35 +19,32 @@
     <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()">
       <span id="theme-icon">🌙</span> <span id="theme-text">Тёмная</span>
     </button>
-
-    <div id="logout-wrapper" style="display: none;">
+    <div id="logout-wrapper">
         <button class="login-btn" onclick="handleLogout()">Выйти</button>
     </div>
   </div>
 </div>
 
-<div id="auth-screen" class="auth-screen-overlay">
+<div id="auth-screen" class="auth-screen-overlay" style="display: none;">
   <div class="login-card">
     <h3>Вход в систему</h3>
-    <p>Пожалуйста, авторизуйтесь для доступа к панели управления.</p>
-
+    <p>Пожалуйста, авторизуйтесь для доступа.</p>
     <div id="login-error" class="error-message">Неверный E-mail или пароль!</div>
-
     <form onsubmit="handleLogin(event)">
       <div class="input-group">
         <label for="email">E-mail</label>
-        <input type="email" id="email" required placeholder="example@mail.com">
+        <input type="email" id="email" required placeholder="admin@mail.com">
       </div>
       <div class="input-group">
         <label for="password">Пароль</label>
-        <input type="password" id="password" required placeholder="••••••••">
+        <input type="password" id="password" required placeholder="123456">
       </div>
       <button type="submit" class="submit-btn">Войти</button>
     </form>
   </div>
 </div>
 
-<div class="nav-wrap" id="main-nav">
+<div class="nav-wrap" id="main-nav" style="display: flex;">
   <button class="nav-btn active" onclick="showPage('daily', this)">
     <span class="icon">📋</span> Дневной план
   </button>
@@ -616,13 +56,13 @@
   </button>
 </div>
 
-<div class="main" id="main-content">
+<div class="main" id="main-content" style="display: block;">
 
   <div class="page active" id="page-daily">
     <div class="page-header">
       <div>
         <div class="page-title">ДНЕВНОЙ <span>ПЛАН</span></div>
-        <div class="page-sub">УЧЁТ РЕЙСОВ · AIRTIMES ИНТЕГРАЦИЯ</div>
+        <div class="page-sub">УЧЁТ РЕЙСОВ · АВТОПОДСТАНОВКА ВОДИТЕЛЕЙ</div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <input type="date" class="ctrl-input" id="date-picker" onchange="renderDaily()">
@@ -636,11 +76,51 @@
     <div class="day-summary active" id="day-summary">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px" id="day-info-bar"></div>
       <div class="metrics" id="day-metrics"></div>
+
       <div class="table-card">
         <div class="table-head">
           <span class="table-title">Рейсы по автобусам</span>
-          <span class="mono" style="font-size:11px;color:var(--muted)" id="day-date-label"></span>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <button class="add-btn" onclick="toggleAddTripForm()">+ Добавить рейс</button>
+            <span class="mono" style="font-size:11px;color:var(--muted)" id="day-date-label"></span>
+          </div>
         </div>
+
+        <div id="add-trip-form-wrap" style="display: none; padding: 20px; background: var(--bg3); border-bottom: 1px solid var(--border);">
+          <form onsubmit="saveNewTrip(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; align-items: flex-end;">
+            <div class="input-group" style="margin-bottom: 0;">
+              <label>Водитель (из расписания)</label>
+              <select id="form-driver-select" required class="ctrl-select" style="width:100%; height: 38px;" onchange="handleFormDriverChange()">
+                </select>
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label>Маршрут</label>
+              <input type="text" id="form-route" readonly placeholder="Автоматически" class="ctrl-input" style="width:100%; background: var(--bg2); cursor: not-allowed;">
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label>Гос. номер</label>
+              <input type="text" id="form-num" readonly placeholder="Автоматически" class="ctrl-input" style="width:100%; background: var(--bg2); cursor: not-allowed;">
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label>Выезд</label>
+              <input type="time" id="form-out" readonly class="ctrl-input" style="width:100%; background: var(--bg2); cursor: not-allowed;">
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label>Заезд</label>
+              <input type="time" id="form-in" readonly class="ctrl-input" style="width:100%; background: var(--bg2); cursor: not-allowed;">
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label>Рейсов</label>
+              <input type="number" id="form-trips" min="0" required placeholder="0" class="ctrl-input" style="width:100%">
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label>Пропуски ост.</label>
+              <input type="number" id="form-missed" min="0" required placeholder="0" class="ctrl-input" style="width:100%">
+            </div>
+            <button type="submit" class="add-btn" style="height: 38px; width: 100%;">Сохранить</button>
+          </form>
+        </div>
+
         <div class="table-wrap">
           <table>
             <thead>
@@ -660,7 +140,7 @@
       </div>
     </div>
 
-    <div class="month-summary" id="month-summary">
+    <div class="month-summary" id="month-summary" style="display: none;">
       <div class="metrics" id="month-metrics"></div>
       <div class="table-card">
         <div class="table-head">
@@ -693,14 +173,45 @@
         <div class="page-title">ВОДИТЕЛИ</div>
         <div class="page-sub">РАСПИСАНИЕ · ЧЁТНЫЕ И НЕЧЁТНЫЕ ДНИ</div>
       </div>
-      <select class="ctrl-select" id="driver-filter" onchange="renderDrivers()">
-        <option value="all">Все водители</option>
-        <option value="even">Чётные дни</option>
-        <option value="odd">Нечётные дни</option>
-        <option value="black">Чёрные дни</option>
-        <option value="noblack">Не чёрные дни</option>
-      </select>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="add-btn" onclick="toggleAddDriverForm()">+ Добавить водителя</button>
+        <select class="ctrl-select" id="driver-filter" onchange="renderDrivers()">
+          <option value="all">Все водители</option>
+          <option value="even">Чётные дни</option>
+          <option value="odd">Нечётные дни</option>
+        </select>
+      </div>
     </div>
+
+    <div id="add-driver-form-wrap" style="display: none; padding: 20px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 20px;">
+      <form onsubmit="saveNewDriver(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: flex-end;">
+        <div class="input-group" style="margin-bottom: 0;">
+          <label>ФИО Водителя</label>
+          <input type="text" id="d-form-name" required placeholder="Джасур Ахмедов" class="ctrl-input" style="width:100%">
+        </div>
+        <div class="input-group" style="margin-bottom: 0;">
+          <label>Гос. номер автобуса</label>
+          <input type="text" id="d-form-bus" required placeholder="01 | 777 AAA" class="ctrl-input" style="width:100%">
+        </div>
+        <div class="input-group" style="margin-bottom: 0;">
+          <label>Маршрут</label>
+          <input type="text" id="d-form-route" required placeholder="М-5" class="ctrl-input" style="width:100%">
+        </div>
+        <div class="input-group" style="margin-bottom: 0;">
+          <label>График</label>
+          <select id="d-form-schedule" class="ctrl-select" style="width:100%; height: 35px;">
+            <option value="even">Чётные дни</option>
+            <option value="odd">Нечётные дни</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin-bottom: 0;">
+          <label>Время смены</label>
+          <input type="text" id="d-form-shift" required placeholder="06:00 – 22:30" class="ctrl-input" style="width:100%">
+        </div>
+        <button type="submit" class="add-btn" style="height: 35px; width: 100%;">Сохранить</button>
+      </form>
+    </div>
+
     <div class="driver-grid" id="drivers-grid"></div>
   </div>
 
@@ -733,392 +244,8 @@
     </div>
   </div>
 
-</div><script>
-/* ── DATA ── */
-const buses = [
-  { num: '01-177 AA', route: 'М-1',  driver: 'Иванов Сергей',  out: '06:00', in: '22:30' },
-  { num: '23-450 BA', route: 'М-3',  driver: 'Петров Алим',    out: '05:45', in: '21:45' },
-  { num: '88-321 CA', route: 'М-7',  driver: 'Назаров Хасан',  out: '06:15', in: '22:00' },
-  { num: '47-110 DA', route: 'М-12', driver: 'Юсупов Жамшид',  out: '06:30', in: '23:00' },
-];
+</div>
 
-const drivers = [
-  { name:'Иванов Сергей',  bus:'01-177 AA', route:'М-1',  schedule:'even', black:false, shift:'06:00–22:30', trips:428 },
-  { name:'Петров Алим',    bus:'23-450 BA', route:'М-3',  schedule:'odd',  black:false, shift:'05:45–21:45', trips:412 },
-  { name:'Назаров Хасан',  bus:'88-321 CA', route:'М-7',  schedule:'even', black:true,  shift:'06:15–22:00', trips:397 },
-  { name:'Юсупов Жамшид',  bus:'47-110 DA', route:'М-12', schedule:'odd',  black:true,  shift:'06:30–23:00', trips:441 },
-  { name:'Каримов Бобур',  bus:'01-177 AA', route:'М-1',  schedule:'odd',  black:false, shift:'06:00–22:30', trips:389 },
-  { name:'Рашидов Дилшод', bus:'23-450 BA', route:'М-3',  schedule:'even', black:false, shift:'05:45–21:45', trips:405 },
-];
-
-const techData = {
-  tires: [
-    { bus:'01-177 AA', last:'10.11.2025', km:38000, max:50000, status:'ok'     },
-    { bus:'23-450 BA', last:'22.08.2025', km:48200, max:50000, status:'warn'   },
-    { bus:'88-321 CA', last:'05.01.2026', km:22000, max:50000, status:'ok'     },
-    { bus:'47-110 DA', last:'14.06.2025', km:51000, max:50000, status:'danger' },
-  ],
-  brakes: [
-    { bus:'01-177 AA', last:'01.12.2025', km:18000, max:30000, status:'ok'     },
-    { bus:'23-450 BA', last:'15.09.2025', km:27500, max:30000, status:'warn'   },
-    { bus:'88-321 CA', last:'10.02.2026', km:9000,  max:30000, status:'ok'     },
-    { bus:'47-110 DA', last:'20.07.2025', km:31000, max:30000, status:'danger' },
-  ],
-  oil: [
-    { bus:'01-177 AA', last:'01.03.2026', km:7000,  max:10000, status:'ok'     },
-    { bus:'23-450 BA', last:'10.01.2026', km:9600,  max:10000, status:'warn'   },
-    { bus:'88-321 CA', last:'01.04.2026', km:3200,  max:10000, status:'ok'     },
-    { bus:'47-110 DA', last:'20.12.2025', km:11000, max:10000, status:'danger' },
-  ],
-};
-
-const schedule = [
-  { bus:'01-177 AA', type:'ТО-2',           date:'15.06.2026', days:27 },
-  { bus:'23-450 BA', type:'Замена тормозов', date:'25.05.2026', days:6  },
-  { bus:'88-321 CA', type:'ТО-1',           date:'01.07.2026', days:43 },
-  { bus:'47-110 DA', type:'Полное ТО',      date:'20.05.2026', days:1  },
-];
-
-/* ── AUTHENTICATION GUARD LOGIC ── */
-let isLoggedIn = false;
-
-// TO'G'RI MA'LUMOTLAR KONSTANTASI
-const VALID_EMAIL = "sherzodboss2405@gmail.com";
-const VALID_PASSWORD = "fdsfds";
-
-function checkAuth() {
-  const authScreen = document.getElementById('auth-screen');
-  const mainNav = document.getElementById('main-nav');
-  const mainContent = document.getElementById('main-content');
-  const logoutWrap = document.getElementById('logout-wrapper');
-
-  if (isLoggedIn) {
-    authScreen.style.display = 'none';
-    mainNav.style.display = 'flex';
-    mainContent.style.display = 'block';
-    logoutWrap.style.display = 'block';
-    renderDaily();
-  } else {
-    authScreen.style.display = 'flex';
-    mainNav.style.display = 'none';
-    mainContent.style.display = 'none';
-    logoutWrap.style.display = 'none';
-  }
-}
-
-function handleLogin(event) {
-  event.preventDefault();
-
-  const emailInput = document.getElementById('email').value.trim();
-  const passwordInput = document.getElementById('password').value;
-  const errorBlock = document.getElementById('login-error');
-
-  // Exact Email va Password tekshiruvi
-  if (emailInput === VALID_EMAIL && passwordInput === VALID_PASSWORD) {
-    isLoggedIn = true;
-    errorBlock.style.display = 'none'; // Xatolikni yashirish
-    checkAuth();
-  } else {
-    // Agar xato bo'lsa, ogohlantirish xabarini ko'rsatish
-    isLoggedIn = false;
-    errorBlock.style.display = 'block';
-
-    // Parol maydonini tozalab qo'yamiz
-    document.getElementById('password').value = '';
-  }
-}
-
-function handleLogout() {
-  isLoggedIn = false;
-  // Chiqqanda formani ham tozalaymiz
-  document.getElementById('email').value = '';
-  document.getElementById('password').value = '';
-  document.getElementById('login-error').style.display = 'none';
-  checkAuth();
-}
-
-/* ── HELPERS ── */
-let currentView = 'day';
-
-function rng(seed, min, max) {
-  let s = (seed * 1103515245 + 12345) & 0x7fffffff;
-  return min + (s % (max - min + 1));
-}
-
-function statusColor(s) {
-  return s === 'danger' ? 'var(--red)' : s === 'warn' ? 'var(--accent)' : 'var(--green)';
-}
-function statusBadge(s) {
-  if (s === 'danger') return '<span class="badge b-red">Замена!</span>';
-  if (s === 'warn')   return '<span class="badge b-amber">Скоро</span>';
-  return '<span class="badge b-green">Норма</span>';
-}
-
-/* ── THEME TOGGLE LOGIC ── */
-function initTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  updateThemeButton(savedTheme);
-}
-
-function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute('data-theme');
-  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
-  updateThemeButton(newTheme);
-}
-
-function updateThemeButton(theme) {
-  const icon = document.getElementById('theme-icon');
-  const text = document.getElementById('theme-text');
-  if (theme === 'dark') {
-    icon.textContent = '🌙';
-    text.textContent = 'Тёмная';
-  } else {
-    icon.textContent = '☀️';
-    text.textContent = 'Светлая';
-  }
-}
-
-/* ── CLOCK ── */
-function tick() {
-  const now = new Date();
-  document.getElementById('live-clock').textContent =
-    now.toLocaleTimeString('ru-RU');
-  document.getElementById('live-date').textContent =
-    now.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) + ' · Ташкент';
-}
-setInterval(tick, 1000); tick();
-
-/* ── NAVIGATION ── */
-function showPage(id, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  btn.classList.add('active');
-  if (id === 'daily')   renderDaily();
-  if (id === 'drivers') renderDrivers();
-  if (id === 'tech')    renderTech('tires');
-}
-
-function setView(v, btn) {
-  currentView = v;
-  document.querySelectorAll('.vt-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const ds = document.getElementById('day-summary');
-  const ms = document.getElementById('month-summary');
-  ds.style.display = v === 'day' ? 'block' : 'none';
-  ms.style.display = v === 'month' ? 'none' : 'block';
-  ds.classList.toggle('active', v === 'day');
-  ms.classList.toggle('active', v === 'month');
-  if (v === 'day') renderDayView();
-  else renderMonthView();
-}
-
-/* ── DAILY PAGE ── */
-function renderDaily() {
-  if (!isLoggedIn) return;
-  if (currentView === 'day') renderDayView();
-  else renderMonthView();
-}
-
-function renderDayView() {
-  const val = document.getElementById('date-picker').value || new Date().toISOString().slice(0,10);
-  const d = new Date(val + 'T00:00:00');
-  const day = d.getDate();
-  const isEven = day % 2 === 0;
-  const seed = day * 137 + d.getMonth() * 31 + 1;
-
-  const bar = document.getElementById('day-info-bar');
-  if (bar) {
-    bar.innerHTML = `
-      <span class="day-pill ${isEven ? 'day-even' : 'day-odd'}">${isEven ? 'Чётный день' : 'Нечётный день'}</span>
-      <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${d.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span>
-    `;
-  }
-
-  let totalTrips = 0, totalMissed = 0;
-  const rows = buses.map((b, i) => {
-    const trips  = rng(seed + i * 13, 14, 22);
-    const missed = rng(seed + i * 7 + 3, 0, 4);
-    totalTrips += trips; totalMissed += missed;
-    return { ...b, trips, missed };
-  });
-
-  document.getElementById('day-date-label').textContent = d.toLocaleDateString('ru-RU');
-
-  document.getElementById('day-metrics').innerHTML = `
-    <div class="metric-card green">
-      <div class="metric-lbl">Рейсов за день</div>
-      <div class="metric-val green">${totalTrips}</div>
-    </div>
-    <div class="metric-card red">
-      <div class="metric-lbl">Пропущено остановок</div>
-      <div class="metric-val ${totalMissed > 5 ? 'red' : 'amber'}">${totalMissed}</div>
-    </div>
-    <div class="metric-card muted">
-      <div class="metric-lbl">Автобусов на линии</div>
-      <div class="metric-val white">${buses.length}</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-lbl">Маршрутов</div>
-      <div class="metric-val amber">4</div>
-    </div>
-  `;
-
-  document.getElementById('daily-body').innerHTML = rows.map(r => `
-    <tr>
-      <td><span class="badge b-blue">${r.route}</span></td>
-      <td><span class="bus-num">${r.num}</span></td>
-      <td>${r.driver}</td>
-      <td class="mono" style="color:var(--accent)">${r.out}</td>
-      <td class="mono" style="color:var(--muted)">${r.in}</td>
-      <td><span class="badge b-green">${r.trips}</span></td>
-      <td><span class="badge ${r.missed > 2 ? 'b-red' : r.missed > 0 ? 'b-amber' : 'b-green'}">${r.missed}</span></td>
-    </tr>
-  `).join('');
-}
-
-function renderMonthView() {
-  let total = 0, missed = 0;
-  const rows = buses.map((b, i) => {
-    const t = 400 + i * 18 + Math.floor(Math.sin(i * 1.7) * 20 + 20);
-    const m = 7 + i * 3;
-    total += t; missed += m;
-    return { ...b, t, m };
-  });
-  document.getElementById('month-metrics').innerHTML = `
-    <div class="metric-card green">
-      <div class="metric-lbl">Рейсов за 30 дней</div>
-      <div class="metric-val green">${total}</div>
-    </div>
-    <div class="metric-card red">
-      <div class="metric-lbl">Пропущено остановок</div>
-      <div class="metric-val red">${missed}</div>
-    </div>
-    <div class="metric-card muted">
-      <div class="metric-lbl">Рабочих дней</div>
-      <div class="metric-val white">30</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-lbl">Средн. рейсов / день</div>
-      <div class="metric-val amber">${Math.round(total/30)}</div>
-    </div>
-  `;
-  document.getElementById('month-body').innerHTML = rows.map(r => `
-    <tr>
-      <td><span class="bus-num">${r.num}</span></td>
-      <td>${r.driver}</td>
-      <td><span class="badge b-blue">${r.route}</span></td>
-      <td style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--green)">${r.t}</td>
-      <td><span class="badge ${r.m > 15 ? 'b-red' : 'b-amber'}">${r.m}</span></td>
-      <td class="mono" style="color:var(--muted)">30</td>
-      <td><span class="badge b-green">Норма</span></td>
-    </tr>
-  `).join('');
-}
-
-/* ── DRIVERS PAGE ── */
-function renderDrivers() {
-  const f = document.getElementById('driver-filter').value;
-  let list = drivers;
-  if (f === 'even')    list = drivers.filter(d => d.schedule === 'even');
-  if (f === 'odd')     list = drivers.filter(d => d.schedule === 'odd');
-  if (f === 'black')   list = drivers.filter(d => d.black);
-  if (f === 'noblack') list = drivers.filter(d => !d.black);
-
-  document.getElementById('drivers-grid').innerHTML = list.map(d => {
-    const initials = d.name.split(' ').map(n => n[0]).join('');
-    return `
-    <div class="driver-card">
-      <div class="driver-top">
-        <div class="driver-avatar">${initials}</div>
-        <div>
-          <div class="driver-name">${d.name}</div>
-          <div class="driver-sub">Автобус: ${d.bus} · ${d.route}</div>
-        </div>
-      </div>
-      <div class="driver-tags">
-        <span class="day-pill ${d.schedule === 'even' ? 'day-even' : 'day-odd'}">
-          ${d.schedule === 'even' ? 'Чётные дни' : 'Нечётные дни'}
-        </span>
-        <span class="day-pill ${d.black ? 'day-black' : ''}">
-          ${d.black ? 'Чёрные дни' : 'Не чёрные дни'}
-        </span>
-      </div>
-      <div class="driver-row">
-        <span class="driver-row-lbl">Смена</span>
-        <span class="mono" style="font-size:13px">${d.shift}</span>
-      </div>
-      <div class="driver-row">
-        <span class="driver-row-lbl">Рейсов за месяц</span>
-        <span class="mono" style="font-size:13px;color:var(--green)">${d.trips}</span>
-      </div>
-    </div>
-  `}).join('');
-}
-
-/* ── TECH PAGE ── */
-function showTech(id, btn) {
-  document.querySelectorAll('.tech-section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tech-' + id).classList.add('active');
-  btn.classList.add('active');
-  renderTech(id);
-}
-
-function renderTech(type) {
-  if (type === 'schedule') {
-    document.getElementById('schedule-list').innerHTML = schedule.map(s => {
-      const cls = s.days <= 7 ? 'sched-urgent' : s.days <= 30 ? 'sched-warn' : 'sched-ok';
-      const col = s.days <= 7 ? 'var(--red)' : s.days <= 30 ? 'var(--accent)' : 'var(--green)';
-      return `
-        <div class="sched-card ${cls}">
-          <div class="sched-type">Следующий ремонт</div>
-          <div class="sched-days" style="color:${col}">${s.days}</div>
-          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px">ДНЕЙ ОСТАЛОСЬ</div>
-          <hr class="divider" style="margin:12px 0">
-          <div style="font-weight:600;margin-bottom:4px">${s.type}</div>
-          <div><span class="bus-num">${s.bus}</span></div>
-          <div class="sched-date">Дата: ${s.date}</div>
-        </div>
-      `;
-    }).join('');
-    return;
-  }
-
-  const items = techData[type] || [];
-  const container = document.getElementById(type + '-list');
-  if (container) {
-    container.innerHTML = items.map(item => {
-      const pct = Math.min(100, Math.round(item.km / item.max * 100));
-      const col = statusColor(item.status);
-      return `
-        <div class="tech-item">
-          <div class="tech-top">
-            <div class="tech-bus">
-              <div class="tech-status-dot" style="background:${col};box-shadow:0 0 6px ${col}40"></div>
-              <span class="bus-num">${item.bus}</span>
-            </div>
-            ${statusBadge(item.status)}
-          </div>
-          <div class="tech-info">
-            <span>Последняя замена: <strong>${item.last}</strong></span>
-            <span>Пробег: <strong>${item.km} / ${item.max} км</strong></span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: ${pct}%; background: ${col}"></div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-}
-
-// Initial Call
-initTheme();
-checkAuth();
-</script>
+<script src="script.js"></script>
 </body>
 </html>
