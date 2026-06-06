@@ -12,9 +12,10 @@
 
 from datetime import date
 
+from django.contrib.auth import get_user_model, authenticate
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import SerializerMethodField, CharField
-from rest_framework.serializers import ModelSerializer
+from rest_framework.fields import SerializerMethodField, CharField, EmailField
+from rest_framework.serializers import ModelSerializer, Serializer
 
 from .models import Bus, Driver, DailyTripLog, TechnicalStatus, MaintenanceSchedule
 
@@ -94,4 +95,34 @@ class MaintenanceScheduleSerializer(ModelSerializer):
         if planned_date:
             delta = planned_date - date.today()
             attrs['days_remaining'] = max(0, delta.days)
+        return attrs
+
+
+
+User = get_user_model()
+
+
+class LoginSerializer(Serializer):
+    email = EmailField()
+    password = CharField(write_only=True)
+
+    def validate(self, attrs):
+        try:
+            user = User.objects.get(email=attrs["email"])
+        except User.DoesNotExist:
+            raise ValidationError(
+                "Email yoki parol noto'g'ri"
+            )
+
+        user = authenticate(
+            username=user.username,
+            password=attrs["password"]
+        )
+
+        if not user:
+            raise ValidationError(
+                "Email yoki parol noto'g'ri"
+            )
+
+        attrs["user"] = user
         return attrs

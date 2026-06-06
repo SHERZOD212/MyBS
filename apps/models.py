@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
+from django.db.models import Model, ForeignKey, SET_NULL, CASCADE, TextChoices
 from django.db.models.fields import CharField, BooleanField, TimeField, IntegerField, DateField
-from django.db.models import Model,ForeignKey,SET_NULL,CASCADE,TextChoices
+
 
 # 1. Avtobuslar modeli
 class Bus(Model):
@@ -12,19 +13,18 @@ class Bus(Model):
 
 
 # 2. Haydovchilar modeli
-class ScheduleChoice(TextChoices):
-    EVEN = 'even', 'Juft kunlar (Even)'
-    ODD = 'odd', 'Toq kunlar (Odd)'
-
-
 class Driver(Model):
-    name = CharField(max_length=100,verbose_name="Foydalanuvchi ismi")
-    bus = ForeignKey('apps.Bus',on_delete=SET_NULL,null=True,blank=True,related_name='drivers')
-    schedule = CharField(max_length=10,choices=ScheduleChoice.choices,default=ScheduleChoice.EVEN)
-    black = BooleanField(default=False,verbose_name="Qora ro'yxat / Maxsus holat")
+    class Schedule(TextChoices):
+        EVEN = 'even', 'Juft kunlar (Even)'
+        ODD = 'odd', 'Toq kunlar (Odd)'
+
+    name = CharField(max_length=100, verbose_name="Foydalanuvchi ismi")
+    bus = ForeignKey('apps.Bus', on_delete=SET_NULL, null=True, blank=True, related_name='drivers')
+    schedule = CharField(max_length=10, choices=Schedule.choices, default=Schedule.EVEN)
+    black = BooleanField(default=False, verbose_name="Qora ro'yxat / Maxsus holat")
     shift_start = TimeField(verbose_name="Smena boshi")
     shift_end = TimeField(verbose_name="Smena oxiri")
-    total_trips = IntegerField(default=0,verbose_name="Jami qatnovlar soni")
+    total_trips = IntegerField(default=0, verbose_name="Jami qatnovlar soni")
 
     def __str__(self):
         return self.name
@@ -60,12 +60,12 @@ class TechnicalStatus(Model):
         DANGER = 'danger', 'Xavfli (Danger)'
         REPAIR = 'repair', 'Ta’mir talab'
 
-    bus = ForeignKey('apps.Bus',on_delete=CASCADE,related_name='tech_statuses')
-    category = CharField(max_length=20,choices=TechnicalCategory.choices)
+    bus = ForeignKey('apps.Bus', on_delete=CASCADE, related_name='tech_statuses')
+    category = CharField(max_length=20, choices=TechnicalCategory.choices)
     last_service_date = DateField(verbose_name="Oxirgi texnik ko'rik sanasi")
     current_km = IntegerField(verbose_name="Hozirgi yurgan masofasi (km)")
-    max_km = IntegerField(default=50000,verbose_name="Maksimal ruxsat etilgan masofa (km)")
-    status = CharField(max_length=10,choices=TechnicalStatusChoice.choices,default=TechnicalStatusChoice.OK)
+    max_km = IntegerField(default=50000, verbose_name="Maksimal ruxsat etilgan masofa (km)")
+    status = CharField(max_length=10, choices=TechnicalStatusChoice.choices, default=TechnicalStatusChoice.OK)
 
     class Meta:
         unique_together = ('bus', 'category')
@@ -84,4 +84,4 @@ class MaintenanceSchedule(Model):
 
     def __str__(self):
         return f"{self.bus.num} - {self.maintenance_type}"
-#fdsfds
+# fdsfds

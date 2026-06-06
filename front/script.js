@@ -1,14 +1,14 @@
 /* ==========================================
-   1. БАЗОВЫЕ ДАННЫЕ И ИНИЦИАЛИЗАЦИЯ
+   1. Slayderlar, Soat va Umumiy Ma'lumotlar
    ========================================== */
 
 const drivers = [
-  { name: "Алишер Каримов", bus: "01 | 123 XA", route: "М-5", schedule: "even", shift: "06:00 – 22:30", status: "На линии" },
-  { name: "Джамшид Султанов", bus: "01 | 456 BA", route: "М-5", schedule: "odd", shift: "06:00 – 22:30", status: "Отдых" },
-  { name: "Сардор Умаров", bus: "01 | 789 CA", route: "М-12", schedule: "even", shift: "05:30 – 21:40", status: "На линии" },
-  { name: "Донияр Ахмедов", bus: "01 | 321 DA", route: "М-12", schedule: "odd", shift: "05:30 – 21:40", status: "Отдых" },
-  { name: "Фарход Алиев", bus: "01 | 654 EA", route: "М-2", schedule: "even", shift: "06:15 – 23:00", status: "На линии" },
-  { name: "Тимур Рахимов", bus: "01 | 987 FA", route: "М-2", schedule: "odd", shift: "06:15 – 23:00", status: "Отдых" }
+  { name: "Иван Иванов", bus: "01 | 123 XA", route: "Т-5", schedule: "even", shift: "06:00 - 22:30", status: "На линии" },
+  { name: "Петр Петров", bus: "01 | 456 BA", route: "Т-5", schedule: "odd", shift: "06:00 - 22:30", status: "Отдых" },
+  { name: "Сергей Сидоров", bus: "01 | 789 CA", route: "Т-12", schedule: "even", shift: "05:30 - 21:40", status: "На линии" },
+  { name: "Алексей Кузнецов", bus: "01 | 321 DA", route: "Т-12", schedule: "odd", shift: "05:30 - 21:40", status: "Отдых" },
+  { name: "Михаил Попов", bus: "01 | 654 EA", route: "Т-2", schedule: "even", shift: "06:15 - 23:00", status: "На линии" },
+  { name: "Елена Смирнова", bus: "01 | 987 FA", route: "Т-2", schedule: "odd", shift: "06:15 - 23:00", status: "Отдых" }
 ];
 
 const manualDailyRecords = {};
@@ -43,24 +43,25 @@ function initDefaultDate() {
   }
 }
 
+// MAVZUNI ALMASHTIRISH (Endi HTML va CSS ga to'liq mos keladi)
 function toggleTheme() {
-  const body = document.body;
+  const root = document.documentElement; // :root elementini (html) tanlaymiz
   const btnIcon = document.getElementById("theme-icon");
   const btnText = document.getElementById("theme-text");
 
-  if (body.getAttribute("data-theme") === "light") {
-    body.removeAttribute("data-theme");
+  if (root.getAttribute("data-theme") === "light") {
+    root.removeAttribute("data-theme"); // To'q fon (Dark mode) ishga tushadi
     if(btnIcon) btnIcon.textContent = "🌙";
     if(btnText) btnText.textContent = "Тёмная";
   } else {
-    body.setAttribute("data-theme", "light");
+    root.setAttribute("data-theme", "light"); // Yorqin fon (Light mode) ishga tushadi
     if(btnIcon) btnIcon.textContent = "☀️";
     if(btnText) btnText.textContent = "Светлая";
   }
 }
 
 /* ==========================================
-   2. АВТОРИЗАЦИЯ И НАВИГАЦИЯ
+   2. Avtorizatsiya va Navigatsiya
    ========================================== */
 
 function handleLogin(event) {
@@ -98,7 +99,7 @@ function showPage(pageId, btn) {
 }
 
 /* ==========================================
-   3. ДНЕВНОЙ ПЛАН И РАЗДЕЛЕНИЕ ЛИСТОВ
+   3. Kunlik Hisobot va Grafika
    ========================================== */
 
 let currentView = "day";
@@ -129,7 +130,8 @@ function renderDaily() {
     document.getElementById("month-summary").style.display = "block";
     renderMonthView();
   }
-  if (document.getElementById("add-trip-form-wrap").style.display === "block") {
+  const formWrap = document.getElementById("add-trip-form-wrap");
+  if (formWrap && formWrap.style.display === "block") {
     populateDriverSelect();
   }
 }
@@ -162,7 +164,7 @@ function renderDayView() {
   const activeDriversToday = drivers.filter(drv => drv.schedule === currentParity);
 
   let currentBusesList = activeDriversToday.map((drv, i) => {
-    const times = drv.shift.split("–");
+    const times = drv.shift.split("-");
     return {
       num: drv.bus,
       route: drv.route,
@@ -227,7 +229,7 @@ function renderDayView() {
         <div class="metric-val green">${totalTrips}</div>
       </div>
       <div class="metric-card red">
-        <div class="metric-lbl">Пропущено ост.</div>
+        <div class="metric-lbl">Пропущено рейс.</div>
         <div class="metric-val red">${totalMissed}</div>
       </div>
     `;
@@ -258,7 +260,7 @@ function renderMonthView() {
         <td class="mono">${trips}</td>
         <td class="mono" style="color:var(--red);">${missed}</td>
         <td class="mono">${workingDays}</td>
-        <td><span style="color:var(--green);">● Выполнен</span></td>
+        <td><span style="color:var(--green);">В графике</span></td>
       </tr>
     `;
   }).join("");
@@ -273,7 +275,7 @@ function renderMonthView() {
         <div class="metric-val green">${totalTrips}</div>
       </div>
       <div class="metric-card red">
-        <div class="metric-lbl">Пропуски за месяц</div>
+        <div class="metric-lbl">Пропусков за месяц</div>
         <div class="metric-val red">${totalMissed}</div>
       </div>
     `;
@@ -281,12 +283,13 @@ function renderMonthView() {
 }
 
 /* ==========================================
-   4. ЛОГИКА УМНОЙ ФОРМЫ РЕЙСОВ
+   4. Yangi Reyis Qo'shish Formasi
    ========================================== */
 
 function toggleAddTripForm() {
   const formWrap = document.getElementById("add-trip-form-wrap");
-  if (formWrap.style.display === "none") {
+  if (!formWrap) return;
+  if (formWrap.style.display === "none" || formWrap.style.display === "") {
     formWrap.style.display = "block";
     populateDriverSelect();
   } else {
@@ -302,7 +305,7 @@ function populateDriverSelect() {
   const availableDrivers = drivers.filter(d => d.schedule === currentParity);
 
   if (availableDrivers.length === 0) {
-    select.innerHTML = '<option value="">Нет водителей на этот график</option>';
+    select.innerHTML = '<option value="">Нет водителей на эту смену</option>';
     clearFormFields();
     return;
   }
@@ -325,7 +328,7 @@ function handleFormDriverChange() {
   const driverData = drivers.find(d => d.name === driverName);
 
   if (driverData) {
-    const times = driverData.shift.split("–");
+    const times = driverData.shift.split("–"); // Gidro-tire yoki oddiy tire uchun tekshiruv
     document.getElementById("form-route").value = driverData.route;
     document.getElementById("form-num").value = driverData.bus;
     document.getElementById("form-out").value = times[0] ? times[0].trim() : "06:00";
@@ -375,12 +378,14 @@ function saveNewTrip(event) {
 }
 
 /* ==========================================
-   5. ДОБАВЛЕНИЕ ВОДИТЕЛЕЙ С КЛАВИАТУРЫ
+   5. Haydovchilarni Boshqarish
    ========================================== */
 
 function toggleAddDriverForm() {
   const wrap = document.getElementById("add-driver-form-wrap");
-  wrap.style.display = (wrap.style.display === "none") ? "block" : "none";
+  if (wrap) {
+    wrap.style.display = (wrap.style.display === "none" || wrap.style.display === "") ? "block" : "none";
+  }
 }
 
 function saveNewDriver(event) {
@@ -392,7 +397,6 @@ function saveNewDriver(event) {
   const schedule = document.getElementById("d-form-schedule").value;
   const shift = document.getElementById("d-form-shift").value.trim();
 
-  // Добавляем новый объект в массив данных
   drivers.push({
     name: name,
     bus: bus,
@@ -402,15 +406,14 @@ function saveNewDriver(event) {
     status: "Отдых"
   });
 
-  // Очистка полей формы ввода
   document.getElementById("d-form-name").value = "";
   document.getElementById("d-form-bus").value = "";
   document.getElementById("d-form-route").value = "";
-  document.getElementById("d-form-shift").value = "06:00 – 22:30";
+  document.getElementById("d-form-shift").value = "06:00 - 22:30";
 
   toggleAddDriverForm();
-  renderDrivers(); // Перерисовать страницу водителей
-  renderDaily();   // Синхронизировать селекторы в дневном плане
+  renderDrivers();
+  renderDaily();
 }
 
 function renderDrivers() {
@@ -446,7 +449,7 @@ function renderDrivers() {
 }
 
 /* ==========================================
-   6. СТРАНИЦА ТЕХОБСЛУЖИВАНИЯ
+   6. Texnik Xizmat Ko'rsatish
    ========================================== */
 
 function showTech(sectionId, btn) {
@@ -458,11 +461,199 @@ function showTech(sectionId, btn) {
 
 function renderTech() {
   const tires = document.getElementById("tires-list");
-  if (tires) tires.innerHTML = `<div class="tech-item"><strong>01 | 123 XA</strong> — Износ протектора в норме (25%).</div>`;
+  if (tires) tires.innerHTML = `<div class="tech-item"><strong>01 | 123 XA</strong> - Износ протектора в норме (25%).</div>`;
   const brakes = document.getElementById("brakes-list");
   if (brakes) brakes.innerHTML = `<div class="tech-item">Колодки проверены, критических дефектов не обнаружено.</div>`;
   const oil = document.getElementById("oil-list");
-  if (oil) oil.innerHTML = `<div class="tech-item">Ближайшая замена тех. жидкостей через 1200 км.</div>`;
+  if (oil) oil.innerHTML = `<div class="tech-item">Требуется замена масла через 1200 км.</div>`;
   const schedule = document.getElementById("schedule-list");
   if (schedule) schedule.innerHTML = `<div class="sched-card sched-ok"><div class="sched-type">ТО-2</div><div class="sched-days">В норме</div></div>`;
 }
+
+function saveNewDriver(event) {
+  event.preventDefault();
+
+  const name = document.getElementById("d-form-name").value.trim();
+  const bus = document.getElementById("d-form-bus").value.trim();
+  const route = document.getElementById("d-form-route").value.trim();
+  const schedule = document.getElementById("d-form-schedule").value;
+
+  // Alohida olingan vaqtlar tekshirilyapti va birlashtirilyapti
+  const shiftStart = document.getElementById("d-form-shift-start").value;
+  const shiftEnd = document.getElementById("d-form-shift-end").value;
+  const fullShift = `${shiftStart} - ${shiftEnd}`;
+
+  drivers.push({
+    name: name,
+    bus: bus,
+    route: route,
+    schedule: schedule,
+    shift: fullShift, // Birlashgan format saqlanadi
+    status: "Отдых"
+  });
+
+  // Formani tozalash
+  document.getElementById("d-form-name").value = "";
+  document.getElementById("d-form-bus").value = "";
+  document.getElementById("d-form-route").value = "";
+  document.getElementById("d-form-shift-start").value = "";
+  document.getElementById("d-form-shift-end").value = "";
+
+  toggleAddDriverForm();
+  renderDrivers();
+  renderDaily();
+}
+
+/* ==========================================
+   5. Haydovchilarni Boshqarish (O'zgartirish va O'chirish)
+   ========================================== */
+
+function toggleAddDriverForm() {
+  const wrap = document.getElementById("add-driver-form-wrap");
+  if (!wrap) return;
+
+  if (wrap.style.display === "none" || wrap.style.display === "") {
+    wrap.style.display = "block";
+    document.getElementById("form-driver-title").textContent = "Добавить нового водителя";
+    document.getElementById("d-form-submit-btn").textContent = "Сохранить";
+    document.getElementById("d-form-index").value = "";
+    clearDriverForm();
+  } else {
+    wrap.style.display = "none";
+  }
+}
+
+function clearDriverForm() {
+  document.getElementById("d-form-name").value = "";
+  document.getElementById("d-form-bus").value = "";
+  document.getElementById("d-form-route").value = "";
+  document.getElementById("d-form-shift-start").value = "";
+  document.getElementById("d-form-shift-end").value = "";
+  document.getElementById("d-form-index").value = "";
+}
+
+// 1. TAHRIRLASH: Tugma bosilganda bor ma'lumotni formaga yuklash
+function editDriver(index) {
+  const drv = drivers[index];
+  const wrap = document.getElementById("add-driver-form-wrap");
+
+  if (!drv || !wrap) return;
+
+  wrap.style.display = "block";
+  document.getElementById("form-driver-title").textContent = "Изменить данные водителя";
+  document.getElementById("d-form-submit-btn").textContent = "Изменить";
+  document.getElementById("d-form-index").value = index;
+
+  document.getElementById("d-form-name").value = drv.name;
+  document.getElementById("d-form-bus").value = drv.bus;
+  document.getElementById("d-form-route").value = drv.route;
+  document.getElementById("d-form-schedule").value = drv.schedule;
+
+  if (drv.shift && drv.shift.includes("-")) {
+    const times = drv.shift.split("-");
+    document.getElementById("d-form-shift-start").value = times[0].trim();
+    document.getElementById("d-form-shift-end").value = times[1].trim();
+  } else {
+    document.getElementById("d-form-shift-start").value = "06:00";
+    document.getElementById("d-form-shift-end").value = "22:30";
+  }
+
+  wrap.scrollIntoView({ behavior: 'smooth' });
+}
+
+// 2. O'CHIRISH: Ro'yxatdan o'chirib tashlash funksiyasi
+function deleteDriver(index) {
+  const confirmDelete = confirm(`Вы действительно хотите удалить водителя ${drivers[index].name}?`);
+  if (confirmDelete) {
+    drivers.splice(index, 1); // Massivdan o'chirish
+    renderDrivers();          // Ro'yxatni qayta chizish
+    renderDaily();            // Kunlik planni ham yangilash
+  }
+}
+
+// 3. SAQLASH (Yangi qo'shish yoki Borini o'zgartirish)
+function saveNewDriver(event) {
+  event.preventDefault();
+
+  const indexVal = document.getElementById("d-form-index").value;
+  const name = document.getElementById("d-form-name").value.trim();
+  const bus = document.getElementById("d-form-bus").value.trim();
+  const route = document.getElementById("d-form-route").value.trim();
+  const schedule = document.getElementById("d-form-schedule").value;
+  const shiftStart = document.getElementById("d-form-shift-start").value;
+  const shiftEnd = document.getElementById("d-form-shift-end").value;
+  const fullShift = `${shiftStart} - ${shiftEnd}`;
+
+  if (indexVal !== "") {
+    // Agar yashirin inputda indeks bo'lsa -> BORINI O'ZGARTIRISH
+    const idx = parseInt(indexVal);
+    drivers[idx].name = name;
+    drivers[idx].bus = bus;
+    drivers[idx].route = route;
+    drivers[idx].schedule = schedule;
+    drivers[idx].shift = fullShift;
+  } else {
+    // Agar bo'sh bo'lsa -> YANGI QO'SHISH
+    drivers.push({
+      name: name,
+      bus: bus,
+      route: route,
+      schedule: schedule,
+      shift: fullShift,
+      status: "Отдых"
+    });
+  }
+
+  clearDriverForm();
+  document.getElementById("add-driver-form-wrap").style.display = "none";
+
+  renderDrivers();
+  renderDaily();
+}
+
+// 4. RENDER: Kartochkalarni tugmalari bilan birga chizish
+function renderDrivers() {
+  const grid = document.getElementById("drivers-grid");
+  if (!grid) return;
+
+  const filter = document.getElementById("driver-filter").value;
+
+  grid.innerHTML = drivers.map((d, i) => {
+    if (filter !== "all" && d.schedule !== filter) return "";
+
+    return `
+      <div class="driver-card" style="position: relative; padding-top: 50px;">
+        <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 6px;">
+          <button onclick="editDriver(${i})" class="add-btn" style="height: 26px; padding: 0 8px; font-size: 11px; background: var(--bg3); color: var(--main); border: 1px solid var(--border);">
+            ✏️ Изменить
+          </button>
+          <button onclick="deleteDriver(${i})" class="add-btn" style="height: 26px; padding: 0 8px; font-size: 11px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">
+            🗑️ Удалить
+          </button>
+        </div>
+
+        <div class="driver-top">
+          <div class="driver-avatar">${d.name.split(" ").map(n => n[0]).join("")}</div>
+          <div>
+            <div class="driver-name" style="padding-right: 140px;">${d.name}</div>
+            <div class="driver-sub">${d.schedule === 'even' ? 'Чётные дни' : 'Нечётные дни'}</div>
+          </div>
+        </div>
+        <div class="driver-row">
+          <span class="driver-row-lbl">Автобус:</span>
+          <span class="bus-num">${d.bus}</span>
+        </div>
+        <div class="driver-row">
+          <span class="driver-row-lbl">Маршрут:</span>
+          <strong>${d.route}</strong>
+        </div>
+        <div class="driver-row">
+          <span class="driver-row-lbl">Смена:</span>
+          <span class="mono">${d.shift}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+
