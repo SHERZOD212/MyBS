@@ -1,3 +1,4 @@
+let selectedRoute="all";
 /* ==========================================
    1. Slayderlar, Soat va Umumiy Ma'lumotlar
    ========================================== */
@@ -191,7 +192,11 @@ function renderDayView() {
   let totalTrips = 0;
   let totalMissed = 0;
 
-  const rowsHtml = currentBusesList.map((b, i) => {
+  const filteredBuses = selectedRoute === "all"
+ ? currentBusesList
+ : currentBusesList.filter(b => b.route === selectedRoute);
+
+const rowsHtml = filteredBuses.map((b, i) => {
     const trips = b.manualTrips !== null ? b.manualTrips : rng(seed + i * 13, 14, 22);
     const missed = b.manualMissed !== null ? b.manualMissed : rng(seed + i * 7 + 3, 0, 4);
 
@@ -222,7 +227,7 @@ function renderDayView() {
     metricsDiv.innerHTML = `
       <div class="metric-card">
         <div class="metric-lbl">Автобусов на линии</div>
-        <div class="metric-val white">${currentBusesList.length}</div>
+        <div class="metric-val white">${filteredBuses.length}</div>
       </div>
       <div class="metric-card green">
         <div class="metric-lbl">Всего рейсов</div>
@@ -657,3 +662,10 @@ function renderDrivers() {
 }
 
 
+
+function filterRoute(route,btn){
+ selectedRoute=route;
+ document.querySelectorAll('.route-btn').forEach(x=>x.classList.remove('active'));
+ if(btn) btn.classList.add('active');
+ renderDayView();
+}

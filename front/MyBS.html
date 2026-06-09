@@ -16,6 +16,7 @@
       <div id="live-clock">00:00:00</div>
       <div id="live-date">— Ташкент</div>
     </div>
+
     <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()">
       <span id="theme-icon">🌙</span> <span id="theme-text">Тёмная</span>
     </button>
@@ -79,7 +80,13 @@
 
       <div class="table-card">
         <div class="table-head">
-          <span class="table-title">Рейсы по автобусам</span>
+          <span class="table-title">Рейсы по автобусам
+<div class="route-filters">
+<button class="route-btn active" onclick="filterRoute('all',this)">Barchasi</button>
+<button class="route-btn" onclick="filterRoute('М-2',this)">М-2</button>
+<button class="route-btn" onclick="filterRoute('М-5',this)">М-5</button>
+<button class="route-btn" onclick="filterRoute('М-12',this)">М-12</button>
+</div></span>
           <div style="display: flex; align-items: center; gap: 16px;">
             <button class="add-btn" onclick="toggleAddTripForm()">+ Добавить рейс</button>
             <span class="mono" style="font-size:11px;color:var(--muted)" id="day-date-label"></span>

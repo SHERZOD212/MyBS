@@ -1,15 +1,3 @@
-# from rest_framework import serializers
-# from .models import Bus, Driver
-#
-# class BusSerializer(ModelSerializer):
-#     # Qo'shimcha ravishda avtobusga biriktirilgan haydovchilar sonini ham ko'rish mumkin
-#     drivers_count = IntegerField(source='drivers.count', read_only=True)
-#
-#     class Meta:
-#         model = Bus
-#         fields = ['id', 'num', 'route', 'drivers_count']
-#
-
 from datetime import date
 
 from django.contrib.auth import get_user_model, authenticate

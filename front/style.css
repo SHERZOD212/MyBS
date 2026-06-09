@@ -251,3 +251,48 @@ td { padding: 13px 16px; border-bottom: 1px solid var(--border); }
   .topbar { padding: 16px; }
   .nav-wrap { padding: 0 16px; }
 }
+.route-filters{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.route-btn{padding:6px 12px;cursor:pointer}
+
+
+/* Google'ning tepadagi va pastdagi xunuk ramkalarini butunlay yo'qotamiz */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-gadget-icon,
+iframe.goog-te-menu-frame {
+    display: none !important;
+}
+body {
+    top: 0px !important;
+}
+.goog-text-highlight {
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* RU | UZ tugmalarining dizayni */
+.lang-buttons {
+    display: flex;
+    align-items: center;
+    font-family: sans-serif;
+}
+.lang-btn {
+    background: none;
+    border: none;
+    color: #999; /* Aktiv bo'lmagan til rangi (sal xiraroq) */
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 5px;
+    transition: color 0.3s ease;
+}
+.lang-btn:hover {
+    color: #333; /* Sichqoncha olib borilgandagi rang */
+}
+.lang-btn.active {
+    color: #000; /* Aktiv til rangi (to'qroq yoki saytingiz rangiga moslang) */
+}
+.lang-divider {
+    color: #ccc;
+    margin: 0 2px;
+    font-size: 14px;
+}

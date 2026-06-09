@@ -1,8 +1,8 @@
-
 from django.contrib.auth import login
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.utils import timezone
@@ -18,7 +18,14 @@ from .serializers import (
     MaintenanceScheduleSerializer, LoginSerializer
 )
 
-@extend_schema(tags=['Bus'])
+
+# Bus → Автобус
+# Driver → Водитель
+# Route → Маршрут
+# Daily Trip Log → Журнал рейсов
+# Technical Status → Техническое состояние
+# Maintenance Schedule → График технического обслуживания
+@extend_schema(tags=['Автобус'])
 class BusViewSet(ModelViewSet):
     queryset = Bus.objects.all()
     serializer_class = BusSerializer
@@ -40,7 +47,8 @@ class BusViewSet(ModelViewSet):
             status=status.HTTP_200_OK
         )
 
-@extend_schema(tags=['Driver'])
+
+@extend_schema(tags=['Водитель'])
 class DriverViewSet(ModelViewSet):
     queryset = Driver.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -57,7 +65,8 @@ class DriverViewSet(ModelViewSet):
         serializer = self.get_serializer(bad_drivers, many=True)
         return Response(serializer.data)
 
-@extend_schema(tags=['Daily Trip'])
+
+@extend_schema(tags=['Журнал рейсов'])
 class DailyTripLogViewSet(ModelViewSet):
     queryset = DailyTripLog.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -74,7 +83,8 @@ class DailyTripLogViewSet(ModelViewSet):
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
 
-@extend_schema(tags=['Technical Status'])
+
+@extend_schema(tags=['Техническое состояние'])
 class TechnicalStatusViewSet(ModelViewSet):
     queryset = TechnicalStatus.objects.all()
     serializer_class = TechnicalStatusSerializer
@@ -86,7 +96,8 @@ class TechnicalStatusViewSet(ModelViewSet):
         serializer = self.get_serializer(bad_tech, many=True)
         return Response(serializer.data)
 
-@extend_schema(tags=['Maintenance Schedule'])
+
+@extend_schema(tags=['График технического обслуживания'])
 class MaintenanceScheduleViewSet(ModelViewSet):
     queryset = MaintenanceSchedule.objects.all()
     serializer_class = MaintenanceScheduleSerializer
@@ -99,14 +110,12 @@ class MaintenanceScheduleViewSet(ModelViewSet):
         return Response(serializer.data)
 
 
-
 @extend_schema(tags=['Login'])
-class LoginView(APIView):
+class LoginView(GenericAPIView):
     permission_classes = []
-
+    serializer_class = LoginSerializer
 
     @extend_schema(
-        tags=['Authentication'],
         description="Foydalanuvchi email va paroli orqali tizimga kirish",
         responses={200: LoginSerializer}
     )
