@@ -1,0 +1,56 @@
+
+services:
+  postgres_service:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_DB=mybs_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - mybs_network
+
+  redis_service:
+    image: redis:alpine
+    networks:
+      - mybs_network
+
+  backend_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      - .:/app
+      - media:/app/media
+    ports:
+      - "8002:8001"
+    depends_on:
+      - postgres_service
+      - redis_service
+    networks:
+      - mybs_network
+
+  frontend_service:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    volumes:
+      - ./front:/usr/share/nginx/html/
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend_service
+    networks:
+      - mybs_network
+
+volumes:
+  media:
+  pgdata:
+
+networks:
+  mybs_network:
+    driver: bridge

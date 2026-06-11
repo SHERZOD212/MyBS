@@ -1,14 +1,20 @@
+run:
+	docker compose up
+
+stop:
+	docker compose down
+
 mig:
-	python manage.py makemigrations
+	docker compose exec backend uv run python manage.py makemigrations
 
 up:
-	python manage.py migrate
+	docker compose exec backend uv run python manage.py migrate
 
 user:
-	python manage.py createsuperuser
+	docker compose exec backend uv run python manage.py createsuperuser
+
+celery:
+	docker compose exec backend uv run celery -A root worker -l INFO
 
 apps:
 	python manage.py startapp apps
-
-celery:
-	celery -A root worker -l INFO

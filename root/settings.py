@@ -28,7 +28,9 @@ SECRET_KEY = os.getenv('DJANG0_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# root/settings.py
+
+ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'localhost']
 # AUTH_USER_MODEL = 'apps.User'
 
 # Application definition
@@ -64,6 +66,8 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
+    'http://localhost:8002',
+    'http://127.0.0.1:8002',
 ]
 
 
