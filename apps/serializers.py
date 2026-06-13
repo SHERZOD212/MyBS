@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model, authenticate
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import SerializerMethodField, CharField, EmailField
 from rest_framework.serializers import ModelSerializer, Serializer
+from django.contrib.auth.password_validation import validate_password
 
 from .models import Bus, Driver, DailyTripLog, TechnicalStatus, MaintenanceSchedule
 
@@ -89,28 +90,38 @@ class MaintenanceScheduleSerializer(ModelSerializer):
 
 User = get_user_model()
 
-
 class LoginSerializer(Serializer):
-    email = EmailField()
+    username = CharField()
     password = CharField(write_only=True)
 
     def validate(self, attrs):
-        try:
-            user = User.objects.get(email=attrs["email"])
-        except User.DoesNotExist:
-            raise ValidationError(
-                "Email yoki parol noto'g'ri"
-            )
-
         user = authenticate(
-            username=user.username,
+            username=attrs["username"],
             password=attrs["password"]
         )
 
         if not user:
             raise ValidationError(
-                "Email yoki parol noto'g'ri"
+                "Username yoki parol noto'g'ri"
             )
 
         attrs["user"] = user
         return attrs
+
+
+
+
+class RegisterSerializer(ModelSerializer):
+    password = CharField(write_only=True, required=True, validators=[validate_password])
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'password']
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password']
+        )
+        return user

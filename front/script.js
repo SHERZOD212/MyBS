@@ -1,671 +1,511 @@
-let selectedRoute="all";
-/* ==========================================
-   1. Slayderlar, Soat va Umumiy Ma'lumotlar
-   ========================================== */
+let selectedRoute = "all";
 
-const drivers = [
-  { name: "Иван Иванов", bus: "01 | 123 XA", route: "Т-5", schedule: "even", shift: "06:00 - 22:30", status: "На линии" },
-  { name: "Петр Петров", bus: "01 | 456 BA", route: "Т-5", schedule: "odd", shift: "06:00 - 22:30", status: "Отдых" },
-  { name: "Сергей Сидоров", bus: "01 | 789 CA", route: "Т-12", schedule: "even", shift: "05:30 - 21:40", status: "На линии" },
-  { name: "Алексей Кузнецов", bus: "01 | 321 DA", route: "Т-12", schedule: "odd", shift: "05:30 - 21:40", status: "Отдых" },
-  { name: "Михаил Попов", bus: "01 | 654 EA", route: "Т-2", schedule: "even", shift: "06:15 - 23:00", status: "На линии" },
-  { name: "Елена Смирнова", bus: "01 | 987 FA", route: "Т-2", schedule: "odd", shift: "06:15 - 23:00", status: "Отдых" }
-];
+/* =======================================================
+   1. BACKEND INTEGRATSIYASI (LOGIN VA REGISTRATSIYA)
+   ======================================================= */
 
-const manualDailyRecords = {};
+// Backend manzili (Docker-compose dagi 8000 tashqi portiga moslandi)
+const BACKEND_BASE = "http://localhost:8000";
 
-function rng(seed, min, max) {
-  const x = Math.sin(seed) * 10000;
-  return Math.floor((x - Math.floor(x)) * (max - min + 1)) + min;
+// URL manzillarni bəkendga 100% moslashtiramiz (oxiridagi slashlarga e'tibor bering)
+const LOGIN_URL = `${BACKEND_BASE}/login/`;      // token/ emas, bəkenddagi kabi login/ bo'lishi shart!
+const REGISTER_URL = `${BACKEND_BASE}/register/`;
+
+// Oynalarni almashtirish funksiyasi (Login <-> Register tablari)
+function switchAuthTab(tab) {
+  const loginBlock = document.getElementById("login-form-block");
+  const registerBlock = document.getElementById("register-form-block");
+  const loginBtn = document.getElementById("tab-login-btn");
+  const registerBtn = document.getElementById("tab-register-btn");
+
+  // ?. operatori yoki xavfsiz tekshiruv yordamida elementlar tozalanadi
+  if (document.getElementById("login-error")) document.getElementById("login-error").style.display = "none";
+  if (document.getElementById("register-error")) document.getElementById("register-error").style.display = "none";
+  if (document.getElementById("register-success")) document.getElementById("register-success").style.display = "none";
+
+  if (tab === "login") {
+    if (loginBlock) loginBlock.style.display = "block";
+    if (registerBlock) registerBlock.style.display = "none";
+    if (loginBtn) loginBtn.classList.add("active");
+    if (registerBtn) registerBtn.classList.remove("active");
+  } else {
+    if (loginBlock) loginBlock.style.display = "none";
+    if (registerBlock) registerBlock.style.display = "block";
+    if (loginBtn) loginBtn.classList.remove("active");
+    if (registerBtn) registerBtn.classList.add("active");
+  }
 }
 
+// Foydalanuvchi tizimga kirgan yoki kirmaganligini tekshirish
+function checkAuthStatus() {
+  const token = localStorage.getItem("accessToken");
+  const authScreen = document.getElementById("auth-screen");
+  const mainNav = document.getElementById("main-nav");
+  const mainContent = document.getElementById("main-content");
+  const logoutWrapper = document.getElementById("logout-wrapper");
+
+  if (token) {
+    if (authScreen) authScreen.style.display = "none";
+    if (mainNav) mainNav.style.display = "flex";
+    if (mainContent) mainContent.style.display = "block";
+    if (logoutWrapper) logoutWrapper.style.display = "block";
+  } else {
+    if (authScreen) authScreen.style.display = "flex";
+    if (mainNav) mainNav.style.display = "none";
+    if (mainContent) mainContent.style.display = "none";
+    if (logoutWrapper) logoutWrapper.style.display = "none";
+  }
+}
+
+// TIZIMGA KIRISH (LOGIN) SO'ROVI
+async function handleLogin(event) {
+  event.preventDefault();
+
+  const username = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const errorMsg = document.getElementById("login-error");
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+
+  try {
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Kutilmoqda..."; }
+    if (errorMsg) errorMsg.style.display = "none";
+
+    const response = await fetch(LOGIN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      localStorage.setItem("accessToken", data.access);
+      if (data.refresh) localStorage.setItem("refreshToken", data.refresh);
+
+      checkAuthStatus();
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      if (errorMsg) {
+        errorMsg.textContent = errData.detail || "Login yoki parol noto'g'ri!";
+        errorMsg.style.display = "block";
+      }
+    }
+  } catch (err) {
+    if (errorMsg) { errorMsg.textContent = "Backend server bilan aloqa yo'q!"; errorMsg.style.display = "block"; }
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Kirish"; }
+  }
+}
+
+// RO'YXATDAN O'TISH (REGISTER) SO'ROVI
+async function handleRegister(event) {
+  event.preventDefault();
+
+  const username = document.getElementById("reg-username").value.trim();
+  const email = document.getElementById("reg-email").value.trim();
+  const password = document.getElementById("reg-password").value;
+  const passwordConfirm = document.getElementById("reg-password-confirm").value;
+
+  const errorMsg = document.getElementById("register-error");
+  const successMsg = document.getElementById("register-success");
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+
+  if (errorMsg) errorMsg.style.display = "none";
+  if (successMsg) successMsg.style.display = "none";
+
+  if (password !== passwordConfirm) {
+    if (errorMsg) {
+      errorMsg.textContent = "Parollar mos kelmadi!";
+      errorMsg.style.display = "block";
+    }
+    return;
+  }
+
+  try {
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Ro'yxatdan o'tilmoqda..."; }
+
+    const response = await fetch(REGISTER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password })
+    });
+
+    if (response.ok || response.status === 201) {
+      if (successMsg) {
+        successMsg.textContent = "Muvaffaqiyatli ro'yxatdan o'tdingiz! Yo'naltirilmoqda...";
+        successMsg.style.display = "block";
+      }
+      event.target.reset();
+      setTimeout(() => switchAuthTab('login'), 2000);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      if (errorMsg) {
+        let errMsg = "Ro'yxatdan o'tishda xatolik!";
+        if (errData.username) errMsg = `Username: ${errData.username[0]}`;
+        else if (errData.email) errMsg = `Email: ${errData.email[0]}`;
+        else if (errData.password) errMsg = `Password: ${errData.password[0]}`;
+
+        errorMsg.textContent = errMsg;
+        errorMsg.style.display = "block";
+      }
+    }
+  } catch (err) {
+    if (errorMsg) { errorMsg.textContent = "Server bilan aloqa uzildi!"; errorMsg.style.display = "block"; }
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Ro'yxatdan o'tish"; }
+  }
+}
+
+// TIZIMDAN CHIQISH (LOGOUT)
+function handleLogout() {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  checkAuthStatus();
+}
+
+
+/* =======================================================
+   2. MATRITSA VA STATIK MA'LUMOTLAR
+   ======================================================= */
+
+const drivers = [
+  { name: "Asanov Sanjar", bus: "01 | 123 XA", route: "M-5", schedule: "even", shift: "06:00 - 22:30", status: "Yo'nalishda" },
+  { name: "Valiyev Vali", bus: "01 | 456 BA", route: "M-5", schedule: "odd", shift: "06:00 - 22:30", status: "Dam olmoqda" },
+  { name: "Karimov Sherzod", bus: "01 | 789 CA", route: "M-12", schedule: "even", shift: "05:30 - 21:40", status: "Yo'nalishda" },
+  { name: "Umarov Akmal", bus: "01 | 321 DA", route: "M-12", schedule: "odd", shift: "05:30 - 21:40", status: "Dam olmoqda" },
+  { name: "Aliyev Ali", bus: "01 | 654 EA", route: "M-2", schedule: "even", shift: "06:15 - 23:00", status: "Yo'nalishda" },
+  { name: "G'ofurov Tohir", bus: "01 | 987 FA", route: "M-2", schedule: "odd", shift: "06:15 - 23:00", status: "Ta'mirlashda" }
+];
+
+const techData = {
+  tires: [
+    { bus: "01 | 123 XA", status: "good", left: "85%", desc: "Shinalar yangi, bosim me'yorda." },
+    { bus: "01 | 456 BA", status: "warning", left: "45%", desc: "Old shinalar eskirgan. 5000 km dan keyin almashtirish tavsiya etiladi." },
+    { bus: "01 | 789 CA", status: "good", left: "70%", desc: "Holati qoniqarli." },
+    { bus: "01 | 987 FA", status: "danger", left: "15%", desc: "Shinalar mutloq eskirgan! Zudlik bilan almashtiring." }
+  ],
+  brakes: [
+    { bus: "01 | 123 XA", status: "good", left: "90%", desc: "Tormoz tizimi ideal holatda." },
+    { bus: "01 | 456 BA", status: "good", left: "75%", desc: "Tormoz kolodkalari yaxshi." },
+    { bus: "01 | 789 CA", status: "warning", left: "35%", desc: "Kolodkalar yupqalashgan. Keyingi TO da almashtirilsin." }
+  ],
+  oil: [
+    { bus: "01 | 123 XA", status: "good", left: "8000 km", desc: "Shell Rimula 5W-40. Moy darajasi yaxshi." },
+    { bus: "01 | 456 BA", status: "danger", left: "200 km", desc: "Moy almashtirish muddati kelgan! Davom etish taqiqlanadi." }
+  ],
+  schedule: [
+    { bus: "01 | 123 XA", type: "TO-2", date: "15.06.2026", status: "pending", desc: "Rejali texnik ko'rik." },
+    { bus: "01 | 789 CA", type: "TO-1", date: "10.06.2026", status: "done", desc: "Ko'rikdan o'tdi: moy va filtrlar almashtirildi." }
+  ]
+};
+
+// Sahifa yuklanganda ishga tushadigan qism
 document.addEventListener("DOMContentLoaded", () => {
   initClock();
   initDefaultDate();
+  checkAuthStatus();
   renderDaily();
   renderDrivers();
   renderTech();
 });
 
+/* =======================================================
+   3. SOAT VA NAVIGATSIYA FUNKSIYALARI
+   ======================================================= */
+
 function initClock() {
-  const clock = document.getElementById("live-clock");
-  if (clock) {
-    clock.textContent = new Date().toLocaleTimeString("ru-RU");
-    setInterval(() => {
-      clock.textContent = new Date().toLocaleTimeString("ru-RU");
-    }, 1000);
-  }
+  setInterval(() => {
+    const now = new Date();
+    const clock = document.getElementById("live-clock");
+    if (clock) {
+      clock.textContent = now.toTimeString().split(' ')[0];
+    }
+  }, 1000);
 }
 
 function initDefaultDate() {
-  const picker = document.getElementById("date-picker");
-  if (picker && !picker.value) {
-    picker.value = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  const dateStr = `${day}.${month}.${year}`;
+
+  const liveDateEl = document.getElementById("live-date");
+  if (liveDateEl) {
+    liveDateEl.textContent = `${dateStr} — Toshkent`;
   }
 }
 
-// MAVZUNI ALMASHTIRISH (Endi HTML va CSS ga to'liq mos keladi)
-function toggleTheme() {
-  const root = document.documentElement; // :root elementini (html) tanlaymiz
-  const btnIcon = document.getElementById("theme-icon");
-  const btnText = document.getElementById("theme-text");
-
-  if (root.getAttribute("data-theme") === "light") {
-    root.removeAttribute("data-theme"); // To'q fon (Dark mode) ishga tushadi
-    if(btnIcon) btnIcon.textContent = "🌙";
-    if(btnText) btnText.textContent = "Тёмная";
-  } else {
-    root.setAttribute("data-theme", "light"); // Yorqin fon (Light mode) ishga tushadi
-    if(btnIcon) btnIcon.textContent = "☀️";
-    if(btnText) btnText.textContent = "Светлая";
-  }
-}
-
-/* ==========================================
-   2. Avtorizatsiya va Navigatsiya
-   ========================================== */
-
-function handleLogin(event) {
-  event.preventDefault();
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  const errorMsg = document.getElementById("login-error");
-
-  if (email === "admin@mail.com" && password === "123456") {
-    document.getElementById("auth-screen").style.display = "none";
-    document.getElementById("main-nav").style.display = "flex";
-    document.getElementById("main-content").style.display = "block";
-    errorMsg.style.display = "none";
-  } else {
-    errorMsg.style.display = "block";
-  }
-}
-
-function handleLogout() {
-  document.getElementById("auth-screen").style.display = "flex";
-  document.getElementById("main-nav").style.display = "none";
-  document.getElementById("main-content").style.display = "none";
-}
-
-function showPage(pageId, btn) {
-  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-
+function showPage(pageId) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.getElementById(`page-${pageId}`).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
 
-  if (pageId === "daily") renderDaily();
-  if (pageId === "drivers") renderDrivers();
-  if (pageId === "tech") renderTech();
+  const targetPage = document.getElementById(`page-${pageId}`);
+  const targetBtn = document.getElementById(`nav-${pageId}`);
+
+  if (targetPage) targetPage.classList.add("active");
+  if (targetBtn) targetBtn.classList.add("active");
 }
 
-/* ==========================================
-   3. Kunlik Hisobot va Grafika
-   ========================================== */
+function toggleTheme() {
+  const html = document.documentElement;
+  const currentTheme = html.getAttribute("data-theme");
+  const icon = document.getElementById("theme-icon");
+  const text = document.getElementById("theme-text");
 
-let currentView = "day";
-
-function setView(viewType, btn) {
-  currentView = viewType;
-  document.querySelectorAll(".vt-btn").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-
-  if (viewType === "day") {
-    document.getElementById("day-summary").style.display = "block";
-    document.getElementById("month-summary").style.display = "none";
-    renderDayView();
+  if (currentTheme === "light") {
+    html.removeAttribute("data-theme");
+    if (icon) icon.textContent = "🌙";
+    if (text) text.textContent = "To'q rang";
   } else {
-    document.getElementById("day-summary").style.display = "none";
-    document.getElementById("month-summary").style.display = "block";
-    renderMonthView();
+    html.setAttribute("data-theme", "light");
+    if (icon) icon.textContent = "☀️";
+    if (text) text.textContent = "Yorug' rang";
   }
 }
+
+/* =======================================================
+   4. KUNLIK (EJDNEVNAYA) SAHIFA FUNKSIYALARI
+   ======================================================= */
 
 function renderDaily() {
-  if (currentView === "day") {
-    document.getElementById("day-summary").style.display = "block";
-    document.getElementById("month-summary").style.display = "none";
-    renderDayView();
-  } else {
-    document.getElementById("day-summary").style.display = "none";
-    document.getElementById("month-summary").style.display = "block";
-    renderMonthView();
-  }
-  const formWrap = document.getElementById("add-trip-form-wrap");
-  if (formWrap && formWrap.style.display === "block") {
-    populateDriverSelect();
-  }
-}
-
-function getSelectedDayParity() {
-  const val = document.getElementById("date-picker").value || new Date().toISOString().slice(0, 10);
-  const d = new Date(val + "T00:00:00");
-  return (d.getDate() % 2 === 0) ? "even" : "odd";
-}
-
-function renderDayView() {
-  const val = document.getElementById("date-picker").value || new Date().toISOString().slice(0, 10);
-  const d = new Date(val + "T00:00:00");
-  const day = d.getDate();
-  const currentParity = (day % 2 === 0) ? "even" : "odd";
-  const seed = day * 137 + d.getMonth() * 31 + 1;
-
-  const bar = document.getElementById("day-info-bar");
-  if (bar) {
-    bar.innerHTML = `
-      <span class="day-pill ${currentParity === "even" ? "day-even" : "day-odd"}">
-        ${currentParity === "even" ? "Чётный день" : "Нечётный день"}
-      </span>
-      <span style="font-family: var(--mono); font-size: 12px; color: var(--muted);">
-        ${d.toLocaleDateString("ru-RU", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-      </span>
-    `;
-  }
-
-  const activeDriversToday = drivers.filter(drv => drv.schedule === currentParity);
-
-  let currentBusesList = activeDriversToday.map((drv, i) => {
-    const times = drv.shift.split("-");
-    return {
-      num: drv.bus,
-      route: drv.route,
-      driver: drv.name,
-      out: times[0] ? times[0].trim() : "06:00",
-      in: times[1] ? times[1].trim() : "22:30",
-      manualTrips: null,
-      manualMissed: null
-    };
-  });
-
-  if (manualDailyRecords[val]) {
-    manualDailyRecords[val].forEach(manualBus => {
-      const existingIndex = currentBusesList.findIndex(b => b.num === manualBus.num);
-      if (existingIndex !== -1) {
-        currentBusesList[existingIndex].manualTrips = manualBus.manualTrips;
-        currentBusesList[existingIndex].manualMissed = manualBus.manualMissed;
-      } else {
-        currentBusesList.push(manualBus);
-      }
-    });
-  }
-
-  let totalTrips = 0;
-  let totalMissed = 0;
-
-  const filteredBuses = selectedRoute === "all"
- ? currentBusesList
- : currentBusesList.filter(b => b.route === selectedRoute);
-
-const rowsHtml = filteredBuses.map((b, i) => {
-    const trips = b.manualTrips !== null ? b.manualTrips : rng(seed + i * 13, 14, 22);
-    const missed = b.manualMissed !== null ? b.manualMissed : rng(seed + i * 7 + 3, 0, 4);
-
-    totalTrips += trips;
-    totalMissed += missed;
-
-    return `
-      <tr>
-        <td><span class="badge b-blue">${b.route}</span></td>
-        <td><span class="bus-num">${b.num}</span></td>
-        <td>${b.driver}</td>
-        <td class="mono">${b.out}</td>
-        <td class="mono">${b.in}</td>
-        <td class="mono" style="font-weight:bold;">${trips}</td>
-        <td class="mono" style="font-weight:bold; color:${missed > 0 ? 'var(--red)' : 'var(--green)'};">${missed}</td>
-      </tr>
-    `;
-  }).join("");
-
-  const label = document.getElementById("day-date-label");
-  if (label) label.textContent = d.toLocaleDateString("ru-RU");
-
-  const tbody = document.getElementById("daily-body");
-  if (tbody) tbody.innerHTML = rowsHtml;
-
-  const metricsDiv = document.getElementById("day-metrics");
-  if (metricsDiv) {
-    metricsDiv.innerHTML = `
-      <div class="metric-card">
-        <div class="metric-lbl">Автобусов на линии</div>
-        <div class="metric-val white">${filteredBuses.length}</div>
-      </div>
-      <div class="metric-card green">
-        <div class="metric-lbl">Всего рейсов</div>
-        <div class="metric-val green">${totalTrips}</div>
-      </div>
-      <div class="metric-card red">
-        <div class="metric-lbl">Пропущено рейс.</div>
-        <div class="metric-val red">${totalMissed}</div>
-      </div>
-    `;
-  }
-}
-
-function renderMonthView() {
-  const tbody = document.getElementById("month-body");
+  const tbody = document.getElementById("daily-tbody");
   if (!tbody) return;
+  tbody.innerHTML = "";
 
-  let totalTrips = 0;
-  let totalMissed = 0;
+  let onlineCount = 0;
+  let repairCount = 0;
 
-  const rowsHtml = drivers.map((drv, i) => {
-    const seed = i * 45 + 7;
-    const workingDays = 15;
-    const trips = rng(seed, 240, 290);
-    const missed = rng(seed + 2, 5, 25);
+  drivers.forEach(d => {
+    if (d.status === "Yo'nalishda") onlineCount++;
+    if (d.status === "Ta'mirlashda") repairCount++;
 
-    totalTrips += trips;
-    totalMissed += missed;
+    if (selectedRoute !== "all" && d.route !== selectedRoute) return;
 
-    return `
-      <tr>
-        <td><span class="bus-num">${drv.bus}</span></td>
-        <td>${drv.name}</td>
-        <td><span class="badge b-blue">${drv.route}</span></td>
-        <td class="mono">${trips}</td>
-        <td class="mono" style="color:var(--red);">${missed}</td>
-        <td class="mono">${workingDays}</td>
-        <td><span style="color:var(--green);">В графике</span></td>
-      </tr>
+    let statusClass = "st-off";
+    if (d.status === "Yo'nalishda") statusClass = "st-line";
+    if (d.status === "Ta'mirlashda") statusClass = "st-repair";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${d.name}</strong></td>
+      <td><span class="bus-num">${d.bus}</span></td>
+      <td><span class="mono">${d.route}</span></td>
+      <td><span class="mono" style="font-size:11px; color:var(--muted);">${d.shift}</span></td>
+      <td><span class="status-badge ${statusClass}">${d.status}</span></td>
     `;
-  }).join("");
-
-  tbody.innerHTML = rowsHtml;
-
-  const monthMetrics = document.getElementById("month-metrics");
-  if (monthMetrics) {
-    monthMetrics.innerHTML = `
-      <div class="metric-card green">
-        <div class="metric-lbl">Рейсов за месяц</div>
-        <div class="metric-val green">${totalTrips}</div>
-      </div>
-      <div class="metric-card red">
-        <div class="metric-lbl">Пропусков за месяц</div>
-        <div class="metric-val red">${totalMissed}</div>
-      </div>
-    `;
-  }
-}
-
-/* ==========================================
-   4. Yangi Reyis Qo'shish Formasi
-   ========================================== */
-
-function toggleAddTripForm() {
-  const formWrap = document.getElementById("add-trip-form-wrap");
-  if (!formWrap) return;
-  if (formWrap.style.display === "none" || formWrap.style.display === "") {
-    formWrap.style.display = "block";
-    populateDriverSelect();
-  } else {
-    formWrap.style.display = "none";
-  }
-}
-
-function populateDriverSelect() {
-  const select = document.getElementById("form-driver-select");
-  if (!select) return;
-
-  const currentParity = getSelectedDayParity();
-  const availableDrivers = drivers.filter(d => d.schedule === currentParity);
-
-  if (availableDrivers.length === 0) {
-    select.innerHTML = '<option value="">Нет водителей на эту смену</option>';
-    clearFormFields();
-    return;
-  }
-
-  select.innerHTML = '<option value="">-- Выберите водителя --</option>' +
-    availableDrivers.map(d => `<option value="${d.name}">${d.name}</option>`).join("");
-
-  clearFormFields();
-}
-
-function handleFormDriverChange() {
-  const select = document.getElementById("form-driver-select");
-  const driverName = select.value;
-
-  if (!driverName) {
-    clearFormFields();
-    return;
-  }
-
-  const driverData = drivers.find(d => d.name === driverName);
-
-  if (driverData) {
-    const times = driverData.shift.split("–"); // Gidro-tire yoki oddiy tire uchun tekshiruv
-    document.getElementById("form-route").value = driverData.route;
-    document.getElementById("form-num").value = driverData.bus;
-    document.getElementById("form-out").value = times[0] ? times[0].trim() : "06:00";
-    document.getElementById("form-in").value = times[1] ? times[1].trim() : "22:30";
-  }
-}
-
-function clearFormFields() {
-  document.getElementById("form-route").value = "";
-  document.getElementById("form-num").value = "";
-  document.getElementById("form-out").value = "";
-  document.getElementById("form-in").value = "";
-  document.getElementById("form-trips").value = "";
-  document.getElementById("form-missed").value = "";
-}
-
-function saveNewTrip(event) {
-  event.preventDefault();
-  const dateKey = document.getElementById("date-picker").value || new Date().toISOString().slice(0, 10);
-  const driverName = document.getElementById("form-driver-select").value;
-
-  if (!driverName) {
-    alert("Пожалуйста, выберите водителя!");
-    return;
-  }
-
-  const route = document.getElementById("form-route").value;
-  const num = document.getElementById("form-num").value;
-  const outTime = document.getElementById("form-out").value;
-  const inTime = document.getElementById("form-in").value;
-  const trips = parseInt(document.getElementById("form-trips").value) || 0;
-  const missed = parseInt(document.getElementById("form-missed").value) || 0;
-
-  if (!manualDailyRecords[dateKey]) manualDailyRecords[dateKey] = [];
-
-  if (manualDailyRecords[dateKey].some(b => b.num === num)) {
-    alert("Этот автобус уже добавлен на сегодня!");
-    return;
-  }
-
-  manualDailyRecords[dateKey].push({
-    route: route, num: num, driver: driverName, out: outTime, in: inTime, manualTrips: trips, manualMissed: missed
+    tbody.appendChild(tr);
   });
 
-  toggleAddTripForm();
-  renderDayView();
+  // Hisoblagichlar renderDaily ichida xavfsiz yangilanadi
+  const mOnLine = document.getElementById("m-on-line");
+  const mTotalDrivers = document.getElementById("m-total-drivers");
+  const mInRepair = document.getElementById("m-in-repair");
+
+  if (mOnLine) mOnLine.textContent = onlineCount;
+  if (mTotalDrivers) mTotalDrivers.textContent = drivers.length;
+  if (mInRepair) mInRepair.textContent = repairCount;
 }
 
-/* ==========================================
-   5. Haydovchilarni Boshqarish
-   ========================================== */
+function filterDaily(route) {
+  selectedRoute = route;
 
-function toggleAddDriverForm() {
-  const wrap = document.getElementById("add-driver-form-wrap");
-  if (wrap) {
-    wrap.style.display = (wrap.style.display === "none" || wrap.style.display === "") ? "block" : "none";
-  }
-}
-
-function saveNewDriver(event) {
-  event.preventDefault();
-
-  const name = document.getElementById("d-form-name").value.trim();
-  const bus = document.getElementById("d-form-bus").value.trim();
-  const route = document.getElementById("d-form-route").value.trim();
-  const schedule = document.getElementById("d-form-schedule").value;
-  const shift = document.getElementById("d-form-shift").value.trim();
-
-  drivers.push({
-    name: name,
-    bus: bus,
-    route: route,
-    schedule: schedule,
-    shift: shift,
-    status: "Отдых"
+  document.querySelectorAll(".filter-bar .add-btn").forEach(btn => {
+    btn.classList.remove("active");
+    btn.style.background = "var(--bg2)";
+    btn.style.color = "var(--text)";
+    btn.style.border = "1px solid var(--border)";
   });
 
-  document.getElementById("d-form-name").value = "";
-  document.getElementById("d-form-bus").value = "";
-  document.getElementById("d-form-route").value = "";
-  document.getElementById("d-form-shift").value = "06:00 - 22:30";
+  const activeBtn = document.getElementById(`filter-${route.toLowerCase().replace('-', '')}`);
+  if (activeBtn) {
+    activeBtn.classList.add("active");
+    activeBtn.style.background = "var(--accent)";
+    activeBtn.style.color = "#000";
+    activeBtn.style.border = "none";
+  }
 
-  toggleAddDriverForm();
-  renderDrivers();
   renderDaily();
 }
+
+/* =======================================================
+   5. HAYDOVCHILAR (VODITELI) SAHIFA FUNKSIYALARI
+   ======================================================= */
 
 function renderDrivers() {
   const grid = document.getElementById("drivers-grid");
   if (!grid) return;
+  grid.innerHTML = "";
 
-  const filter = document.getElementById("driver-filter").value;
-  const filtered = drivers.filter(d => filter === "all" || d.schedule === filter);
+  drivers.forEach((d, i) => {
+    let statusClass = "st-off";
+    if (d.status === "Yo'nalishda") statusClass = "st-line";
+    if (d.status === "Ta'mirlashda") statusClass = "st-repair";
 
-  grid.innerHTML = filtered.map(d => `
-    <div class="driver-card">
+    const card = document.createElement("div");
+    card.className = "driver-card";
+    card.innerHTML = `
+      <div class="driver-actions">
+        <button onclick="editDriver(${i})" class="add-btn" style="height: 26px; padding: 0 8px; font-size: 11px; background: var(--bg3); color: var(--text); border: 1px solid var(--border);">Tahrirlash</button>
+        <button onclick="deleteDriver(${i})" class="add-btn" style="height: 26px; padding: 0 8px; font-size: 11px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">O'chirish</button>
+      </div>
       <div class="driver-top">
         <div class="driver-avatar">${d.name.split(" ").map(n => n[0]).join("")}</div>
         <div>
-          <div class="driver-name">${d.name}</div>
-          <div class="driver-sub">${d.schedule === 'even' ? 'Чётные дни' : 'Нечётные дни'}</div>
+          <div class="driver-name" style="padding-right: 140px;">${d.name}</div>
+          <div class="driver-sub">${d.schedule === 'even' ? 'Juft kunlar' : 'Toq kunlar'}</div>
         </div>
       </div>
       <div class="driver-row">
-        <span class="driver-row-lbl">Автобус:</span>
+        <span class="driver-row-lbl">Avtobus:</span>
         <span class="bus-num">${d.bus}</span>
       </div>
       <div class="driver-row">
-        <span class="driver-row-lbl">Маршрут:</span>
+        <span class="driver-row-lbl">Yo'nalish:</span>
         <strong>${d.route}</strong>
       </div>
       <div class="driver-row">
-        <span class="driver-row-lbl">Смена:</span>
+        <span class="driver-row-lbl">Smena:</span>
         <span class="mono">${d.shift}</span>
       </div>
-    </div>
-  `).join("");
+      <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span class="driver-row-lbl">Hozirgi holat:</span>
+        <span class="status-badge ${statusClass}">${d.status}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
 }
 
-/* ==========================================
-   6. Texnik Xizmat Ko'rsatish
-   ========================================== */
+function openDriverModal() {
+  document.getElementById("modal-title-text").textContent = "Yangi haydovchi";
+  document.getElementById("d-form-index").value = "";
+  document.getElementById("driver-form").reset();
 
-function showTech(sectionId, btn) {
-  document.querySelectorAll(".stab").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
+  const modal = document.getElementById("driver-modal");
+  if (modal) modal.classList.add("active");
+}
+
+function saveDriver(event) {
+  event.preventDefault();
+
+  const idx = document.getElementById("d-form-index").value;
+  const name = document.getElementById("d-form-name").value;
+  const bus = document.getElementById("d-form-bus").value;
+  const route = document.getElementById("d-form-route").value;
+  const schedule = document.getElementById("d-form-schedule").value;
+  const status = document.getElementById("d-form-status").value;
+  const start = document.getElementById("d-form-shift-start").value;
+  const end = document.getElementById("d-form-shift-end").value;
+
+  const driverData = {
+    name, bus, route, schedule, status,
+    shift: `${start} - ${end}`
+  };
+
+  if (idx === "") {
+    drivers.push(driverData);
+  } else {
+    drivers[parseInt(idx)] = driverData;
+  }
+
+  const modal = document.getElementById("driver-modal");
+  if (modal) modal.classList.remove("active");
+
+  renderDaily();
+  renderDrivers();
+}
+
+function editDriver(i) {
+  const d = drivers[i];
+  document.getElementById("modal-title-text").textContent = "Tahrirlash";
+  document.getElementById("d-form-index").value = i;
+  document.getElementById("d-form-name").value = d.name;
+  document.getElementById("d-form-bus").value = d.bus;
+  document.getElementById("d-form-route").value = d.route;
+  document.getElementById("d-form-schedule").value = d.schedule;
+  document.getElementById("d-form-status").value = d.status;
+
+  const times = d.shift.split(" - ");
+  if (times.length === 2) {
+    document.getElementById("d-form-shift-start").value = times[0];
+    document.getElementById("d-form-shift-end").value = times[1];
+  }
+
+  const modal = document.getElementById("driver-modal");
+  if (modal) modal.classList.add("active");
+}
+
+function deleteDriver(i) {
+  if (confirm(`Haydovchi ${drivers[i].name} ni o'chirmoqchimisiz?`)) {
+    drivers.splice(i, 1);
+    renderDaily();
+    renderDrivers();
+  }
+}
+
+/* =======================================================
+   6. TEXNIK XIZMAT KO'RSATISH SAHIFA FUNKSIYALARI
+   ======================================================= */
+
+function showTech(section, btn) {
   document.querySelectorAll(".tech-section").forEach(s => s.classList.remove("active"));
-  document.getElementById(`tech-${sectionId}`).classList.add("active");
+  document.querySelectorAll(".subtabs .stab").forEach(b => b.classList.remove("active"));
+
+  const target = document.getElementById(`tech-${section}`);
+  if (target) target.classList.add("active");
+  if (btn) btn.classList.add("active");
 }
 
 function renderTech() {
-  const tires = document.getElementById("tires-list");
-  if (tires) tires.innerHTML = `<div class="tech-item"><strong>01 | 123 XA</strong> - Износ протектора в норме (25%).</div>`;
-  const brakes = document.getElementById("brakes-list");
-  if (brakes) brakes.innerHTML = `<div class="tech-item">Колодки проверены, критических дефектов не обнаружено.</div>`;
-  const oil = document.getElementById("oil-list");
-  if (oil) oil.innerHTML = `<div class="tech-item">Требуется замена масла через 1200 км.</div>`;
-  const schedule = document.getElementById("schedule-list");
-  if (schedule) schedule.innerHTML = `<div class="sched-card sched-ok"><div class="sched-type">ТО-2</div><div class="sched-days">В норме</div></div>`;
-}
-
-function saveNewDriver(event) {
-  event.preventDefault();
-
-  const name = document.getElementById("d-form-name").value.trim();
-  const bus = document.getElementById("d-form-bus").value.trim();
-  const route = document.getElementById("d-form-route").value.trim();
-  const schedule = document.getElementById("d-form-schedule").value;
-
-  // Alohida olingan vaqtlar tekshirilyapti va birlashtirilyapti
-  const shiftStart = document.getElementById("d-form-shift-start").value;
-  const shiftEnd = document.getElementById("d-form-shift-end").value;
-  const fullShift = `${shiftStart} - ${shiftEnd}`;
-
-  drivers.push({
-    name: name,
-    bus: bus,
-    route: route,
-    schedule: schedule,
-    shift: fullShift, // Birlashgan format saqlanadi
-    status: "Отдых"
-  });
-
-  // Formani tozalash
-  document.getElementById("d-form-name").value = "";
-  document.getElementById("d-form-bus").value = "";
-  document.getElementById("d-form-route").value = "";
-  document.getElementById("d-form-shift-start").value = "";
-  document.getElementById("d-form-shift-end").value = "";
-
-  toggleAddDriverForm();
-  renderDrivers();
-  renderDaily();
-}
-
-/* ==========================================
-   5. Haydovchilarni Boshqarish (O'zgartirish va O'chirish)
-   ========================================== */
-
-function toggleAddDriverForm() {
-  const wrap = document.getElementById("add-driver-form-wrap");
-  if (!wrap) return;
-
-  if (wrap.style.display === "none" || wrap.style.display === "") {
-    wrap.style.display = "block";
-    document.getElementById("form-driver-title").textContent = "Добавить нового водителя";
-    document.getElementById("d-form-submit-btn").textContent = "Сохранить";
-    document.getElementById("d-form-index").value = "";
-    clearDriverForm();
-  } else {
-    wrap.style.display = "none";
-  }
-}
-
-function clearDriverForm() {
-  document.getElementById("d-form-name").value = "";
-  document.getElementById("d-form-bus").value = "";
-  document.getElementById("d-form-route").value = "";
-  document.getElementById("d-form-shift-start").value = "";
-  document.getElementById("d-form-shift-end").value = "";
-  document.getElementById("d-form-index").value = "";
-}
-
-// 1. TAHRIRLASH: Tugma bosilganda bor ma'lumotni formaga yuklash
-function editDriver(index) {
-  const drv = drivers[index];
-  const wrap = document.getElementById("add-driver-form-wrap");
-
-  if (!drv || !wrap) return;
-
-  wrap.style.display = "block";
-  document.getElementById("form-driver-title").textContent = "Изменить данные водителя";
-  document.getElementById("d-form-submit-btn").textContent = "Изменить";
-  document.getElementById("d-form-index").value = index;
-
-  document.getElementById("d-form-name").value = drv.name;
-  document.getElementById("d-form-bus").value = drv.bus;
-  document.getElementById("d-form-route").value = drv.route;
-  document.getElementById("d-form-schedule").value = drv.schedule;
-
-  if (drv.shift && drv.shift.includes("-")) {
-    const times = drv.shift.split("-");
-    document.getElementById("d-form-shift-start").value = times[0].trim();
-    document.getElementById("d-form-shift-end").value = times[1].trim();
-  } else {
-    document.getElementById("d-form-shift-start").value = "06:00";
-    document.getElementById("d-form-shift-end").value = "22:30";
-  }
-
-  wrap.scrollIntoView({ behavior: 'smooth' });
-}
-
-// 2. O'CHIRISH: Ro'yxatdan o'chirib tashlash funksiyasi
-function deleteDriver(index) {
-  const confirmDelete = confirm(`Вы действительно хотите удалить водителя ${drivers[index].name}?`);
-  if (confirmDelete) {
-    drivers.splice(index, 1); // Massivdan o'chirish
-    renderDrivers();          // Ro'yxatni qayta chizish
-    renderDaily();            // Kunlik planni ham yangilash
-  }
-}
-
-// 3. SAQLASH (Yangi qo'shish yoki Borini o'zgartirish)
-function saveNewDriver(event) {
-  event.preventDefault();
-
-  const indexVal = document.getElementById("d-form-index").value;
-  const name = document.getElementById("d-form-name").value.trim();
-  const bus = document.getElementById("d-form-bus").value.trim();
-  const route = document.getElementById("d-form-route").value.trim();
-  const schedule = document.getElementById("d-form-schedule").value;
-  const shiftStart = document.getElementById("d-form-shift-start").value;
-  const shiftEnd = document.getElementById("d-form-shift-end").value;
-  const fullShift = `${shiftStart} - ${shiftEnd}`;
-
-  if (indexVal !== "") {
-    // Agar yashirin inputda indeks bo'lsa -> BORINI O'ZGARTIRISH
-    const idx = parseInt(indexVal);
-    drivers[idx].name = name;
-    drivers[idx].bus = bus;
-    drivers[idx].route = route;
-    drivers[idx].schedule = schedule;
-    drivers[idx].shift = fullShift;
-  } else {
-    // Agar bo'sh bo'lsa -> YANGI QO'SHISH
-    drivers.push({
-      name: name,
-      bus: bus,
-      route: route,
-      schedule: schedule,
-      shift: fullShift,
-      status: "Отдых"
-    });
-  }
-
-  clearDriverForm();
-  document.getElementById("add-driver-form-wrap").style.display = "none";
-
-  renderDrivers();
-  renderDaily();
-}
-
-// 4. RENDER: Kartochkalarni tugmalari bilan birga chizish
-function renderDrivers() {
-  const grid = document.getElementById("drivers-grid");
-  if (!grid) return;
-
-  const filter = document.getElementById("driver-filter").value;
-
-  grid.innerHTML = drivers.map((d, i) => {
-    if (filter !== "all" && d.schedule !== filter) return "";
-
-    return `
-      <div class="driver-card" style="position: relative; padding-top: 50px;">
-        <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 6px;">
-          <button onclick="editDriver(${i})" class="add-btn" style="height: 26px; padding: 0 8px; font-size: 11px; background: var(--bg3); color: var(--main); border: 1px solid var(--border);">
-            ✏️ Изменить
-          </button>
-          <button onclick="deleteDriver(${i})" class="add-btn" style="height: 26px; padding: 0 8px; font-size: 11px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">
-            🗑️ Удалить
-          </button>
+  const tiresList = document.getElementById("tires-list");
+  if (tiresList) {
+    tiresList.innerHTML = techData.tires.map(t => `
+      <div class="tech-item">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span class="bus-num">${t.bus}</span>
+          <span class="status-badge ${t.status === 'good' ? 'st-line' : t.status === 'warning' ? 'st-off' : 'st-repair'}">Resurs: ${t.left}</span>
         </div>
-
-        <div class="driver-top">
-          <div class="driver-avatar">${d.name.split(" ").map(n => n[0]).join("")}</div>
-          <div>
-            <div class="driver-name" style="padding-right: 140px;">${d.name}</div>
-            <div class="driver-sub">${d.schedule === 'even' ? 'Чётные дни' : 'Нечётные дни'}</div>
-          </div>
-        </div>
-        <div class="driver-row">
-          <span class="driver-row-lbl">Автобус:</span>
-          <span class="bus-num">${d.bus}</span>
-        </div>
-        <div class="driver-row">
-          <span class="driver-row-lbl">Маршрут:</span>
-          <strong>${d.route}</strong>
-        </div>
-        <div class="driver-row">
-          <span class="driver-row-lbl">Смена:</span>
-          <span class="mono">${d.shift}</span>
-        </div>
+        <div style="font-size:13px; color:var(--text); line-height:1.4;">${t.desc}</div>
       </div>
-    `;
-  }).join("");
-}
+    `).join("");
+  }
 
+  const brakesList = document.getElementById("brakes-list");
+  if (brakesList) {
+    brakesList.innerHTML = techData.brakes.map(b => `
+      <div class="tech-item">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span class="bus-num">${b.bus}</span>
+          <span class="status-badge ${b.status === 'good' ? 'st-line' : 'st-repair'}">Resurs: ${b.left}</span>
+        </div>
+        <div style="font-size:13px; color:var(--text); line-height:1.4;">${b.desc}</div>
+      </div>
+    `).join("");
+  }
 
+  const oilList = document.getElementById("oil-list");
+  if (oilList) {
+    oilList.innerHTML = techData.oil.map(o => `
+      <div class="tech-item">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span class="bus-num">${o.bus}</span>
+          <span class="status-badge ${o.status === 'good' ? 'st-line' : 'st-repair'}">Moy resursi: ${o.left}</span>
+        </div>
+        <div style="font-size:13px; color:var(--text); line-height:1.4;">${o.desc}</div>
+      </div>
+    `).join("");
+  }
 
-function filterRoute(route,btn){
- selectedRoute=route;
- document.querySelectorAll('.route-btn').forEach(x=>x.classList.remove('active'));
- if(btn) btn.classList.add('active');
- renderDayView();
+  const scheduleList = document.getElementById("schedule-list");
+  if (scheduleList) {
+    scheduleList.innerHTML = techData.schedule.map(s => `
+      <div class="tech-item">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span class="bus-num">${s.bus} — <strong style="color:var(--accent);">${s.type}</strong></span>
+          <span class="status-badge ${s.status === 'done' ? 'st-line' : 'st-off'}">${s.date} (${s.status === 'done' ? 'Bajarildi' : 'Kutilmoqda'})</span>
+        </div>
+        <div style="font-size:13px; color:var(--text); line-height:1.4;">${s.desc}</div>
+      </div>
+    `).join("");
+  }
 }

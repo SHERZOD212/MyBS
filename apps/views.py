@@ -15,7 +15,7 @@ from .serializers import (
     DriverSerializer, DriverDetailSerializer,
     DailyTripLogSerializer, DailyTripLogDetailSerializer,
     TechnicalStatusSerializer,
-    MaintenanceScheduleSerializer, LoginSerializer
+    MaintenanceScheduleSerializer, LoginSerializer, RegisterSerializer
 )
 
 
@@ -116,11 +116,11 @@ class LoginView(GenericAPIView):
     serializer_class = LoginSerializer
 
     @extend_schema(
-        description="Foydalanuvchi email va paroli orqali tizimga kirish",
+        description="Foydalanuvchi username va paroli orqali tizimga kirish",
         responses={200: LoginSerializer}
     )
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user = serializer.validated_data["user"]
@@ -132,3 +132,31 @@ class LoginView(GenericAPIView):
             "username": user.username,
             "email": user.email,
         })
+
+
+
+@extend_schema(tags=['Register'])
+class RegisterView(GenericAPIView):
+    permission_classes = []
+    serializer_class = RegisterSerializer
+
+    @extend_schema(
+        description="Yangi foydalanuvchini ro'yxatdan o'tkazish",
+        responses={201: RegisterSerializer}
+    )
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Foydalanuvchini yaratish
+        user = serializer.save()
+
+        # Ro'yxatdan o'tgandan keyin srazi tizimga kirgizib yuborish (ixtiyoriy)
+        login(request, user)
+
+        return Response({
+            "message": "Ro'yxatdan o'tish muvaffaqiyatli",
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+        }, status=status.HTTP_201_CREATED)

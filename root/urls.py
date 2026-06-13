@@ -7,10 +7,14 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 
+from apps.views import RegisterView, LoginView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('api/v1/', include('apps.urls')),
+    path('register/', RegisterView.as_view(), name='register'),
+    path('login/', LoginView.as_view(), name='login'),
 
     # Swagger
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
