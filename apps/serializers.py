@@ -2,7 +2,7 @@ from datetime import date
 
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import SerializerMethodField, CharField, EmailField
+from rest_framework.fields import SerializerMethodField, CharField
 from rest_framework.serializers import ModelSerializer, Serializer
 from django.contrib.auth.password_validation import validate_password
 
@@ -87,9 +87,7 @@ class MaintenanceScheduleSerializer(ModelSerializer):
         return attrs
 
 
-
 User = get_user_model()
-
 class LoginSerializer(Serializer):
     username = CharField()
     password = CharField(write_only=True)
@@ -109,19 +107,24 @@ class LoginSerializer(Serializer):
         return attrs
 
 
-
-
 class RegisterSerializer(ModelSerializer):
-    password = CharField(write_only=True, required=True, validators=[validate_password])
+    password = CharField(
+        write_only=True,
+        validators=[validate_password]
+    )
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
+        fields = (
+            "id",
+            "username",
+            "email",
+            "password",
+        )
 
     def create(self, validated_data):
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data.get('email', ''),
-            password=validated_data['password']
+        return User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data.get("email"),
+            password=validated_data["password"]
         )
-        return user

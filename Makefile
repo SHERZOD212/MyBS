@@ -18,3 +18,6 @@ celery:
 
 apps:
 	python manage.py startapp apps
+
+link:
+	ruff check --fix

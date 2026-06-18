@@ -6,10 +6,11 @@ from .views import (
     DailyTripLogViewSet,
     TechnicalStatusViewSet,
     MaintenanceScheduleViewSet,
+    RegisterView,
     LoginView,
 )
 
-# Router yaratamiz
+
 router = DefaultRouter()
 router.register(r'buses', BusViewSet, basename='bus')
 router.register(r'drivers', DriverViewSet, basename='driver')
@@ -17,7 +18,9 @@ router.register(r'daily-logs', DailyTripLogViewSet, basename='daily-log')
 router.register(r'technical-statuses', TechnicalStatusViewSet, basename='technical-status')
 router.register(r'maintenance-schedules', MaintenanceScheduleViewSet, basename='maintenance-schedule')
 
+
 urlpatterns = [
-    path('login/', LoginView.as_view(), name='login'),
-    path('', include(router.urls)),
+    path("register/", RegisterView.as_view(), name="register"),
+    path("login/", LoginView.as_view(), name="login"),
+    path("", include(router.urls)),
 ]

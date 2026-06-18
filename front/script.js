@@ -8,8 +8,8 @@ let selectedRoute = "all";
 const BACKEND_BASE = "http://localhost:8000";
 
 // URL manzillarni bəkendga 100% moslashtiramiz (oxiridagi slashlarga e'tibor bering)
-const LOGIN_URL = `${BACKEND_BASE}/login/`;      // token/ emas, bəkenddagi kabi login/ bo'lishi shart!
-const REGISTER_URL = `${BACKEND_BASE}/register/`;
+const LOGIN_URL = `${BACKEND_BASE}/api/v1/login/`;      // token/ emas, bəkenddagi kabi login/ bo'lishi shart!
+const REGISTER_URL = `${BACKEND_BASE}/api/v1/register/`;
 
 // Oynalarni almashtirish funksiyasi (Login <-> Register tablari)
 function switchAuthTab(tab) {

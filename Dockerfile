@@ -1,16 +1,9 @@
-FROM python:3.11-slim
-
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+FROM ghcr.io/astral-sh/uv:alpine
 
 WORKDIR /app
 
-
-COPY pyproject.toml uv.lock ./
-
-
-RUN uv sync --frozen --no-cache
-
-
 COPY . .
 
-CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8001"]
+RUN uv sync
+
+CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]

@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.db.models import Model, ForeignKey, SET_NULL, CASCADE, TextChoices
 from django.db.models.fields import CharField, BooleanField, TimeField, IntegerField, DateField
 
@@ -19,7 +18,7 @@ class Driver(Model):
         ODD = 'odd', 'Toq kunlar (Odd)'
 
     name = CharField(max_length=100, verbose_name="Foydalanuvchi ismi")
-    bus = ForeignKey('apps.Bus', on_delete=SET_NULL, null=True, blank=True, related_name='drivers')
+    bus = ForeignKey('apps.Bus', SET_NULL, null=True, blank=True, related_name='drivers')
     schedule = CharField(max_length=10, choices=Schedule.choices, default=Schedule.EVEN)
     black = BooleanField(default=False, verbose_name="Qora ro'yxat / Maxsus holat")
     shift_start = TimeField(verbose_name="Smena boshi")

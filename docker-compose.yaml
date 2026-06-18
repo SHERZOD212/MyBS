@@ -2,10 +2,7 @@
 services:
   postgres_service:
     image: postgres:alpine
-    environment:
-      - POSTGRES_DB=mybs_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=1
+    env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -13,31 +10,20 @@ services:
     networks:
       - mybs_network
 
-  redis_service:
-    image: redis:alpine
-    networks:
-      - mybs_network
-
   backend_service:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     env_file: .env
     volumes:
-      - .:/app
       - media:/app/media
     ports:
-      - "8000:8001"
+      - "8000:8000"
     depends_on:
       - postgres_service
-      - redis_service
     networks:
       - mybs_network
 
   frontend_service:
-    build:
-      context: ./front
-      dockerfile: Dockerfile
+    build: ./front
     volumes:
       - ./front:/usr/share/nginx/html/
     ports:
