@@ -23,9 +23,7 @@ services:
       - mybs_network
 
   frontend_service:
-    build: ./front
-    volumes:
-      - ./front:/usr/share/nginx/html/
+    build: ./frontend
     ports:
       - "3000:80"
     depends_on:

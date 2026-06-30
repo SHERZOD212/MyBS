@@ -7,7 +7,16 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.utils import timezone
 from rest_framework.viewsets import ModelViewSet
 
-from .models import Bus, Driver, DailyTripLog, TechnicalStatus, MaintenanceSchedule
+from .models import (
+    Bus,
+    Driver,
+    DailyTripLog,
+    TechnicalStatus,
+    MaintenanceSchedule,
+    Fine,
+    WorkAttendance,
+    Salary,
+)
 from .serializers import (
     BusSerializer,
     DriverSerializer,
@@ -16,6 +25,12 @@ from .serializers import (
     DailyTripLogDetailSerializer,
     TechnicalStatusSerializer,
     MaintenanceScheduleSerializer,
+    FineSerializer,
+    FineDetailSerializer,
+    WorkAttendanceSerializer,
+    WorkAttendanceDetailSerializer,
+    SalarySerializer,
+    SalaryDetailSerializer,
     LoginSerializer,
     RegisterSerializer,
 )
@@ -23,13 +38,10 @@ from .serializers import (
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-# Bus → Автобус
-# Driver → Водитель
-# Route → Маршрут
-# Daily Trip Log → Журнал рейсов
-# Technical Status → Техническое состояние
-# Maintenance Schedule → График технического обслуживания
-@extend_schema(tags=["Автобус"])
+# ==========================================
+# 1. Bus (Avtobuslar) ViewSet
+# ==========================================
+@extend_schema(tags=["Avtobuslar"])
 class BusViewSet(ModelViewSet):
     queryset = Bus.objects.all()
     serializer_class = BusSerializer
@@ -49,7 +61,10 @@ class BusViewSet(ModelViewSet):
         return Response({"status": f"{bus.num}-avtobus yo'nalishi yangilandi!"})
 
 
-@extend_schema(tags=["Водитель"])
+# ==========================================
+# 2. Driver (Haydovchilar) ViewSet
+# ==========================================
+@extend_schema(tags=["Haydovchilar"])
 class DriverViewSet(ModelViewSet):
     queryset = Driver.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -57,7 +72,6 @@ class DriverViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
             return DriverDetailSerializer
-
         return DriverSerializer
 
     @action(detail=False, methods=["get"], url_path="blacklist")
@@ -67,7 +81,10 @@ class DriverViewSet(ModelViewSet):
         return Response(serializer.data)
 
 
-@extend_schema(tags=["Журнал рейсов"])
+# ==========================================
+# 3. DailyTripLog (Kunlik Qatnovlar) ViewSet
+# ==========================================
+@extend_schema(tags=["Kunlik Qatnovlar"])
 class DailyTripLogViewSet(ModelViewSet):
     queryset = DailyTripLog.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -85,7 +102,110 @@ class DailyTripLogViewSet(ModelViewSet):
         return Response(serializer.data)
 
 
-@extend_schema(tags=["Техническое состояние"])
+# ==========================================
+# 4. Fine (Shtraflar) ViewSet
+# ==========================================
+@extend_schema(tags=["Jarimalar / Shtraflar"])
+class FineViewSet(ModelViewSet):
+    queryset = Fine.objects.all()
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.action in ["list", "retrieve"]:
+            return FineDetailSerializer
+        return FineSerializer
+
+    @action(detail=False, methods=["get"], url_path="by_driver")
+    def by_driver(self, request):
+        driver_id = request.query_params.get("driver_id")
+        if driver_id:
+            fines = Fine.objects.filter(driver_id=driver_id)
+            serializer = self.get_serializer(fines, many=True)
+            return Response(serializer.data)
+        return Response(
+            {"error": "driver_id parametri kerak"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+# ==========================================
+# 5. WorkAttendance (Ish Vaqti) ViewSet
+# ==========================================
+@extend_schema(tags=["Ish Vaqti / Tabel"])
+class WorkAttendanceViewSet(ModelViewSet):
+    queryset = WorkAttendance.objects.all()
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.action in ["list", "retrieve"]:
+            return WorkAttendanceDetailSerializer
+        return WorkAttendanceSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        year = self.request.query_params.get("year")
+        month = self.request.query_params.get("month")
+        if year:
+            queryset = queryset.filter(date__year=year)
+        if month is not None and month != "":
+            try:
+                # Convert 0-indexed month from frontend to 1-indexed for Django
+                django_month = int(month) + 1
+                queryset = queryset.filter(date__month=django_month)
+            except ValueError:
+                pass
+        return queryset
+
+    @action(detail=False, methods=["get"], url_path="monthly_report")
+    def monthly_report(self, request):
+        year = request.query_params.get("year", timezone.now().year)
+        month = request.query_params.get("month", timezone.now().month)
+        attendances = WorkAttendance.objects.filter(date__year=year, date__month=month)
+        serializer = self.get_serializer(attendances, many=True)
+        return Response(serializer.data)
+
+
+# ==========================================
+# 6. Salary (Oylik Maosh) ViewSet
+# ==========================================
+@extend_schema(tags=["Oylik Maosh"])
+class SalaryViewSet(ModelViewSet):
+    queryset = Salary.objects.all()
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.action in ["list", "retrieve"]:
+            return SalaryDetailSerializer
+        return SalarySerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        year = self.request.query_params.get("year")
+        month = self.request.query_params.get("month")
+        if year:
+            queryset = queryset.filter(year=year)
+        if month is not None and month != "":
+            queryset = queryset.filter(month=month)
+        return queryset
+
+    @action(detail=False, methods=["get"], url_path="filter_salary")
+    def filter_salary(self, request):
+        year = request.query_params.get("year")
+        month = request.query_params.get("month")
+
+        queryset = Salary.objects.all()
+        if year:
+            queryset = queryset.filter(year=year)
+        if month:
+            queryset = queryset.filter(month=month)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+# ==========================================
+# 7. TechnicalStatus (Texnik Holat) ViewSet
+# ==========================================
+@extend_schema(tags=["Texnik Holat"])
 class TechnicalStatusViewSet(ModelViewSet):
     queryset = TechnicalStatus.objects.all()
     serializer_class = TechnicalStatusSerializer
@@ -98,7 +218,10 @@ class TechnicalStatusViewSet(ModelViewSet):
         return Response(serializer.data)
 
 
-@extend_schema(tags=["График технического обслуживания"])
+# ==========================================
+# 8. MaintenanceSchedule (Texnik Reja) ViewSet
+# ==========================================
+@extend_schema(tags=["Texnik Xizmat Rejasi"])
 class MaintenanceScheduleViewSet(ModelViewSet):
     queryset = MaintenanceSchedule.objects.all()
     serializer_class = MaintenanceScheduleSerializer
@@ -113,6 +236,9 @@ class MaintenanceScheduleViewSet(ModelViewSet):
         return Response(serializer.data)
 
 
+# ==========================================
+# 9. Auth Views (Login & Register)
+# ==========================================
 @extend_schema(tags=["Auth"])
 class LoginView(GenericAPIView):
     permission_classes = []
@@ -124,7 +250,6 @@ class LoginView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.validated_data["user"]
-
         refresh = RefreshToken.for_user(user)
 
         return Response(
@@ -150,7 +275,6 @@ class RegisterView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
-
         refresh = RefreshToken.for_user(user)
 
         return Response(
