@@ -31,12 +31,12 @@ class DriverSerializer(ModelSerializer):
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
-        if instance.shift_start and instance.shift_end:
-            start_str = instance.shift_start.strftime("%H:%M")
-            end_str = instance.shift_end.strftime("%H:%M")
-            ret["shift"] = f"{start_str} - {end_str}"
-        else:
-            ret["shift"] = "06:00 - 18:00"
+        # if instance.shift_start and instance.shift_end:
+        #     start_str = instance.shift_start.strftime("%H:%M")
+        #     end_str = instance.shift_end.strftime("%H:%M")
+        #     ret["shift"] = f"{start_str} - {end_str}"
+        # else:
+        #     ret["shift"] = "06:00 - 18:00"
         return ret
 
     def to_internal_value(self, data):
@@ -193,6 +193,18 @@ class SalarySerializer(ModelSerializer):
         model = Salary
         fields = "__all__"
 
+    def to_internal_value(self, data):
+        """
+        Фронтенддан келаётган 0-11 форматдаги ойни (Июн=5)
+        базага ёзишдан олдин 1-12 форматга (Июн=6) ўгиради.
+        """
+        if "month" in data and data["month"] is not None and data["month"] != "":
+            try:
+                data["month"] = int(data["month"]) + 1
+            except ValueError:
+                pass
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         fixed = attrs.get("fixed_salary", 0)
         bonus = attrs.get("bonus", 0)
@@ -201,7 +213,7 @@ class SalarySerializer(ModelSerializer):
         if fixed < 0 or bonus < 0 or fines < 0:
             raise ValidationError("Moliyaviy qiymatlar manfiy bo'lishi mumkin emas!")
 
-        # Qo'lga tegadigan jami summana avtomatik hisoblash
+        # Qo'lga tegadigan jami summani avtomatik hisoblash
         attrs["total_paid"] = max(0, (fixed + bonus) - fines)
         return attrs
 
@@ -216,26 +228,19 @@ class SalaryDetailSerializer(ModelSerializer):
         fields = "__all__"
 
     def get_month_display(self, obj):
+        """
+        Базадаги 1-12 форматдаги ойни (6) рўйхатдан тўғри топиш
+        учун 1 ни айириб индекслаймиз (6 - 1 = 5 -> 'Iyun').
+        """
         months = [
-            "Yanvar",
-            "Fevral",
-            "Mart",
-            "Aprel",
-            "May",
-            "Iyun",
-            "Iyul",
-            "Avgust",
-            "Sentabr",
-            "Oktabr",
-            "Noyabr",
-            "Dekabr",
+            "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+            "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
         ]
         try:
-            return months[obj.month]
-        except (IndexError, TypeError):
+            # Жадвалда ой номи тўғри чиқиши учун -1 қиламиз
+            return months[obj.month - 1]
+        except (IndexError, TypeError, ValueError):
             return f"{obj.month}-oy"
-
-
 # ==========================================
 # 7. TechnicalStatus (Texnik Holat) Serializers
 # ==========================================

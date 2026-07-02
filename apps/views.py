@@ -163,7 +163,6 @@ class WorkAttendanceViewSet(ModelViewSet):
         serializer = self.get_serializer(attendances, many=True)
         return Response(serializer.data)
 
-
 # ==========================================
 # 6. Salary (Oylik Maosh) ViewSet
 # ==========================================
@@ -181,10 +180,16 @@ class SalaryViewSet(ModelViewSet):
         queryset = super().get_queryset()
         year = self.request.query_params.get("year")
         month = self.request.query_params.get("month")
+
         if year:
             queryset = queryset.filter(year=year)
         if month is not None and month != "":
-            queryset = queryset.filter(month=month)
+            try:
+                # Фронтенддан келган 0-indexed ойни (Июн=5) бэкенд учун 1-indexed (Июн=6) га ўгирамиз
+                django_month = int(month) + 1
+                queryset = queryset.filter(month=django_month)
+            except ValueError:
+                pass
         return queryset
 
     @action(detail=False, methods=["get"], url_path="filter_salary")
@@ -195,8 +200,13 @@ class SalaryViewSet(ModelViewSet):
         queryset = Salary.objects.all()
         if year:
             queryset = queryset.filter(year=year)
-        if month:
-            queryset = queryset.filter(month=month)
+        if month is not None and month != "":
+            try:
+                # Бу ерда ҳам фронтенд ой форматини тўғрилаймиз
+                django_month = int(month) + 1
+                queryset = queryset.filter(month=django_month)
+            except ValueError:
+                pass
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)

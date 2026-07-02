@@ -21,8 +21,8 @@ class Driver(Model):
     bus = ForeignKey('apps.Bus', on_delete=SET_NULL, null=True, blank=True, related_name='drivers')
     schedule = CharField(max_length=10, choices=Schedule.choices, default=Schedule.EVEN)
     black = BooleanField(default=False, verbose_name="Qora ro'yxat / Maxsus holat")
-    shift_start = TimeField(default="06:00", verbose_name="Smena boshi")
-    shift_end = TimeField(default="18:00", verbose_name="Smena oxiri")
+    shift_start = TimeField(default="06:00", verbose_name="Smena boshi", blank=True, null=True)
+    shift_end = TimeField(default="18:00", verbose_name="Smena oxiri", blank=True, null=True)
     total_trips = IntegerField(default=0, verbose_name="Jami qatnovlar soni")
     phone = CharField(max_length=20, blank=True, null=True, verbose_name="Telefon raqami") # HTML modalda borligi uchun qo'shildi
 
@@ -84,8 +84,8 @@ class Salary(Model):
     fines_deduction = DecimalField(max_length=12, max_digits=12, decimal_places=2, default=0, verbose_name="Jrimadan ushlab qolingan")
     total_paid = DecimalField(max_length=12, max_digits=12, decimal_places=2, verbose_name="Qo'lga tegadigan jami summa")
 
-    class Meta:
-        unique_together = ('driver', 'year', 'month')
+#    class Meta:
+#       unique_together = ('driver', 'year', 'month')
 
     def __str__(self):
         return f"{self.driver.name} - {self.year}/{self.month} uchun maosh"
