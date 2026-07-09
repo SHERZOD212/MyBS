@@ -4,18 +4,28 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import api from '@/services/api';
 import { Fine } from '@/types';
+import Modal from '../ui/Modal';
 
 export default function Fines() {
   const { drivers, t, lang } = useApp();
   const [fines, setFines] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Form states
+  // Form states for adding
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [fineDate, setFineDate] = useState('');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
+
+  // Modal states for editing
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editDriverId, setEditDriverId] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editReason, setEditReason] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   const fetchFines = async () => {
     setLoading(true);
@@ -31,11 +41,9 @@ export default function Fines() {
 
   useEffect(() => {
     fetchFines();
-    // Default fineDate to today
     setFineDate(new Date().toISOString().split('T')[0]);
   }, []);
 
-  // Pre-select first driver if list loads
   useEffect(() => {
     if (drivers.length > 0 && !selectedDriverId) {
       setSelectedDriverId(String(drivers[0].id));
@@ -68,6 +76,44 @@ export default function Fines() {
       alert('Xatolik: ' + JSON.stringify(error.response?.data || error.message));
     } finally {
       setSubmitLoading(false);
+    }
+  };
+
+  const handleOpenEdit = (fine: Fine) => {
+    setEditingId(fine.id);
+    const driverId = typeof fine.driver === 'object' && fine.driver !== null ? fine.driver.id : fine.driver;
+    setEditDriverId(String(driverId));
+    setEditDate(fine.date);
+    setEditAmount(fine.amount);
+    setEditReason(fine.reason);
+    setModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId || !editDriverId || !editDate || !editAmount || !editReason.trim()) {
+      alert('Barcha maydonlarni toʻldiring!');
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      const response = await api.put(`/fines/${editingId}/`, {
+        driver: parseInt(editDriverId),
+        date: editDate,
+        amount: parseFloat(editAmount),
+        reason: editReason.trim(),
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        await fetchFines();
+        setModalOpen(false);
+      }
+    } catch (error: any) {
+      console.error('Failed to update fine', error);
+      alert('Xatolik: ' + JSON.stringify(error.response?.data || error.message));
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -106,7 +152,7 @@ export default function Fines() {
           <div className="page-sub">
             {lang === 'ru'
               ? 'Выставление и просмотр штрафов водителей'
-              : 'Haydovchilarga jarima yozish va koʻrish'}
+              : 'Haydovchilaga jarima yozish va koʻrish'}
           </div>
         </div>
       </div>
@@ -217,7 +263,13 @@ export default function Fines() {
                         {parseInt(fine.amount).toLocaleString()} sum
                       </td>
                       <td>{fine.reason}</td>
-                      <td className="actions-cell">
+                      <td className="actions-cell" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button
+                          className="btn-action btn-edit"
+                          onClick={() => handleOpenEdit(fine)}
+                        >
+                          {t('btnEdit')}
+                        </button>
                         <button
                           className="btn-action btn-delete"
                           onClick={() => handleDeleteFine(fine.id)}
@@ -233,6 +285,74 @@ export default function Fines() {
           </table>
         </div>
       </div>
+
+      {/* Edit Fine Modal */}
+      {modalOpen && (
+        <Modal
+          title={lang === 'ru' ? 'Редактировать штраф' : 'Jarimani tahrirlash'}
+          onClose={() => setModalOpen(false)}
+        >
+          <form onSubmit={handleSaveEdit}>
+            <div className="input-group">
+              <label>{t('colDriver')}:</label>
+              <select
+                className="ctrl-input"
+                required
+                value={editDriverId}
+                onChange={(e) => setEditDriverId(e.target.value)}
+              >
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="input-group">
+              <label>{lang === 'ru' ? 'Дата нарушения:' : 'Qoidabuzarlik sanasi:'}</label>
+              <input
+                type="date"
+                className="ctrl-input"
+                required
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>{lang === 'ru' ? 'Сумма штрафа (сум):' : 'Jarima summasi (soʻm):'}</label>
+              <input
+                type="number"
+                className="ctrl-input"
+                required
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>{lang === 'ru' ? 'Причина:' : 'Sababi:'}</label>
+              <input
+                type="text"
+                className="ctrl-input"
+                required
+                value={editReason}
+                onChange={(e) => setEditReason(e.target.value)}
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button type="button" className="modal-btn cancel-btn" onClick={() => setModalOpen(false)}>
+                {t('btnCancel')}
+              </button>
+              <button type="submit" disabled={editLoading} className="modal-btn save primary-btn">
+                {editLoading ? '...' : t('btnSave')}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -7,19 +7,35 @@ import { WorkAttendance } from '@/types';
 import Modal from '../ui/Modal';
 
 export default function WorkingHours() {
-  const { lang, t, refreshDrivers } = useApp();
+  const { lang, t, refreshDrivers, drivers, buses } = useApp();
   const [attendances, setAttendances] = useState<WorkAttendance[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
   const [selectedYear, setSelectedYear] = useState('2026');
   const [selectedMonth, setSelectedMonth] = useState('5'); // Default is June (index 5)
+  const [selectedBusId, setSelectedBusId] = useState('all');
+  const [selectedSchedule, setSelectedSchedule] = useState('all');
 
-  // Shift Edit Modal States
+  // Shift Edit Modal States (for editing Driver's default shift)
   const [editingDriverId, setEditingDriverId] = useState<number | null>(null);
   const [startTime, setStartTime] = useState('06:00');
   const [endTime, setEndTime] = useState('18:00');
+  const [driverBusId, setDriverBusId] = useState('');
+  const [driverSchedule, setDriverSchedule] = useState<'even' | 'odd'>('even');
   const [modalLoading, setModalLoading] = useState(false);
+
+  // Attendance Add/Edit Modal States
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [attendanceDate, setAttendanceDate] = useState('');
+  const [plannedHours, setPlannedHours] = useState('8');
+  const [actualHours, setActualHours] = useState('8');
+  const [attendanceStatus, setAttendanceStatus] = useState('Ishda');
+  const [checkIn, setCheckIn] = useState('06:00');
+  const [checkOut, setCheckOut] = useState('22:30');
+  const [saveLoading, setSaveLoading] = useState(false);
 
   const fetchAttendances = async () => {
     setLoading(true);
@@ -74,6 +90,84 @@ export default function WorkingHours() {
     }
   };
 
+  // CRUD for work attendance
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setSelectedDriverId(drivers.length > 0 ? String(drivers[0].id) : '');
+    setAttendanceDate(new Date().toISOString().split('T')[0]);
+    setPlannedHours('8');
+    setActualHours('8');
+    setAttendanceStatus('Ishda');
+    setCheckIn('06:00');
+    setCheckOut('22:30');
+    setModalOpen(true);
+  };
+
+  const handleOpenEdit = (att: WorkAttendance) => {
+    setEditingId(att.id);
+    const driverId = typeof att.driver === 'object' && att.driver !== null ? att.driver.id : att.driver;
+    setSelectedDriverId(String(driverId));
+    setAttendanceDate(att.date);
+    setPlannedHours(String(att.planned_hours));
+    setActualHours(String(att.actual_hours));
+    setAttendanceStatus(att.status || 'Ishda');
+    setCheckIn(att.check_in || '06:00');
+    setCheckOut(att.check_out || '22:30');
+    setModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDriverId || !attendanceDate || !plannedHours || !actualHours) {
+      alert(lang === 'ru' ? 'Заполните обязательные поля!' : 'Majburiy maydonlarni toʻldiring!');
+      return;
+    }
+
+    setSaveLoading(true);
+    const payload = {
+      driver: parseInt(selectedDriverId),
+      date: attendanceDate,
+      planned_hours: parseInt(plannedHours),
+      actual_hours: parseInt(actualHours),
+      status: attendanceStatus,
+      check_in: checkIn,
+      check_out: checkOut,
+    };
+
+    const url = editingId ? `/work-attendances/${editingId}/` : '/work-attendances/';
+    const method = editingId ? 'put' : 'post';
+
+    try {
+      const response = await api[method](url, payload);
+      if (response.status === 200 || response.status === 201) {
+        await fetchAttendances();
+        setModalOpen(false);
+      }
+    } catch (error: any) {
+      console.error('Failed to save attendance', error);
+      alert('Xatolik: ' + JSON.stringify(error.response?.data || error.message));
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    const confirmed = window.confirm(
+      lang === 'ru'
+        ? 'Вы уверены, что хотите удалить эту запись о посещаемости?'
+        : 'Ushbu ish vaqti yozuvini oʻchirishni xohlaysizmi?'
+    );
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/work-attendances/${id}/`);
+      await fetchAttendances();
+    } catch (error) {
+      console.error('Failed to delete attendance', error);
+      alert('Oʻchirishda xatolik yuz berdi.');
+    }
+  };
+
   const monthsList = [
     { value: '0', label: { ru: 'Январь', uz: 'Yanvar' } },
     { value: '1', label: { ru: 'Февраль', uz: 'Fevral' } },
@@ -88,6 +182,29 @@ export default function WorkingHours() {
     { value: '10', label: { ru: 'Ноябрь', uz: 'Noyabr' } },
     { value: '11', label: { ru: 'Декабрь', uz: 'Dekabr' } },
   ];
+
+  const filteredAttendances = attendances.filter((att) => {
+    const driverObj = typeof att.driver === 'object' && att.driver !== null ? att.driver : null;
+    
+    // Bus filter
+    if (selectedBusId !== 'all') {
+      const busObj = driverObj && typeof driverObj.bus === 'object' ? driverObj.bus : null;
+      const busId = busObj ? busObj.id : (driverObj ? driverObj.bus : null);
+      if (String(busId) !== selectedBusId) {
+        return false;
+      }
+    }
+    
+    // Schedule filter
+    if (selectedSchedule !== 'all') {
+      const schedule = driverObj ? driverObj.schedule : 'even';
+      if (schedule !== selectedSchedule) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
 
   return (
     <div>
@@ -110,14 +227,17 @@ export default function WorkingHours() {
               : 'Haydovchilarning rejalashtirilgan va haqiqiy ishlagan soatlari tabeli'}
           </div>
         </div>
+        <button className="add-btn primary-btn" onClick={handleOpenAdd}>
+          {lang === 'ru' ? '+ Добавить раб. время' : '+ Ish vaqti qoʻshish'}
+        </button>
       </div>
 
       {/* Date Filters Panel */}
       <div className="filter-container">
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <select
             className="ctrl-input"
-            style={{ width: '150px' }}
+            style={{ width: '130px' }}
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
           >
@@ -127,7 +247,7 @@ export default function WorkingHours() {
           
           <select
             className="ctrl-input"
-            style={{ width: '160px' }}
+            style={{ width: '140px' }}
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
           >
@@ -136,6 +256,31 @@ export default function WorkingHours() {
                 {m.label[lang]}
               </option>
             ))}
+          </select>
+
+          <select
+            className="ctrl-input"
+            style={{ width: '180px' }}
+            value={selectedBusId}
+            onChange={(e) => setSelectedBusId(e.target.value)}
+          >
+            <option value="all">{lang === 'ru' ? 'Все автобусы' : 'Barcha avtobuslar'}</option>
+            {buses?.map((b: any) => (
+              <option key={b.id} value={b.id}>
+                {b.num} ({b.route})
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="ctrl-input"
+            style={{ width: '160px' }}
+            value={selectedSchedule}
+            onChange={(e) => setSelectedSchedule(e.target.value)}
+          >
+            <option value="all">{lang === 'ru' ? 'Все графики' : 'Barcha grafiklar'}</option>
+            <option value="even">{lang === 'ru' ? 'Четные дни' : 'Juft kunlar'}</option>
+            <option value="odd">{lang === 'ru' ? 'Нечетные дни' : 'Toq kunlar'}</option>
           </select>
         </div>
       </div>
@@ -150,27 +295,29 @@ export default function WorkingHours() {
                 <th>{t('colBusNum')}</th>
                 <th>{t('hoursGraph')}</th>
                 <th>{t('colDriver')}</th>
+                <th>{lang === 'ru' ? 'Дата' : 'Sana'}</th>
                 <th>{t('hoursStart')}</th>
                 <th>{t('hoursEnd')}</th>
                 <th>{t('hoursWorked')}</th>
+                <th>{lang === 'ru' ? 'Статус' : 'Holat'}</th>
                 <th className="actions-cell">{t('colActions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)' }}>
                     {lang === 'ru' ? 'Загрузка...' : 'Yuklanmoqda...'}
                   </td>
                 </tr>
-              ) : attendances.length === 0 ? (
+              ) : filteredAttendances.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)' }}>
                     {lang === 'ru' ? 'Данные посещаемости не найдены' : 'Ish vaqti maʻlumotlari topilmadi'}
                   </td>
                 </tr>
               ) : (
-                attendances.map((att, idx) => {
+                filteredAttendances.map((att, idx) => {
                   const driverObj = typeof att.driver === 'object' && att.driver !== null ? att.driver : null;
                   const driverName = att.driver_display || (driverObj ? driverObj.name : `Driver ID: ${att.driver}`);
                   
@@ -190,12 +337,38 @@ export default function WorkingHours() {
                       <td>
                         <strong>{driverName}</strong>
                       </td>
+                      <td>{att.date}</td>
                       <td>{att.check_in || '06:00'}</td>
                       <td>{att.check_out || '22:30'}</td>
-                      <td style={{ fontWeight: '600' }}>{att.actual_hours || 168} {t('hoursUnit')}</td>
-                      <td className="actions-cell">
+                      <td style={{ fontWeight: '600' }}>{att.actual_hours} / {att.planned_hours} {t('hoursUnit')}</td>
+                      <td>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          background: att.status === 'Ishda' ? 'rgba(0, 200, 83, 0.15)' : 'rgba(213, 0, 0, 0.15)',
+                          color: att.status === 'Ishda' ? 'var(--green)' : 'var(--red)',
+                        }}>
+                          {att.status || 'Ishda'}
+                        </span>
+                      </td>
+                      <td className="actions-cell" style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                         <button
                           className="btn-action btn-edit"
+                          onClick={() => handleOpenEdit(att)}
+                        >
+                          {t('btnEdit')}
+                        </button>
+                        <button
+                          className="btn-action btn-delete"
+                          onClick={() => handleDelete(att.id)}
+                        >
+                          {t('btnDelete')}
+                        </button>
+                        <button
+                          className="btn-action btn-edit"
+                          style={{ background: 'var(--accent)', borderColor: 'var(--accent)' }}
                           onClick={() => {
                             if (driverObj) {
                               handleOpenEditModal(driverObj.id, shift);
@@ -250,6 +423,124 @@ export default function WorkingHours() {
               {modalLoading ? '...' : t('btnSave')}
             </button>
           </div>
+        </Modal>
+      )}
+
+      {/* Attendance Add/Edit Modal */}
+      {modalOpen && (
+        <Modal
+          title={
+            editingId
+              ? lang === 'ru'
+                ? 'Редактировать рабочее время'
+                : 'Ish vaqtini tahrirlash'
+              : lang === 'ru'
+              ? 'Добавить запись рабочего времени'
+              : 'Yangi ish vaqti qoʻshish'
+          }
+          onClose={() => setModalOpen(false)}
+        >
+          <form onSubmit={handleSave}>
+            <div className="input-group">
+              <label>{t('colDriver')}:</label>
+              <select
+                className="ctrl-input"
+                required
+                value={selectedDriverId}
+                onChange={(e) => setSelectedDriverId(e.target.value)}
+              >
+                {drivers.map((d) => {
+                  const busObj = d.bus && typeof d.bus === 'object' ? d.bus : null;
+                  const busNum = busObj ? busObj.num : 'Navbatchi';
+                  const scheduleText = d.schedule === 'even' ? (lang === 'ru' ? 'Чет' : 'Juft') : (lang === 'ru' ? 'Нечет' : 'Toq');
+                  return (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({busNum} - {scheduleText})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div className="input-group">
+              <label>{lang === 'ru' ? 'Дата:' : 'Sana:'}</label>
+              <input
+                type="date"
+                className="ctrl-input"
+                required
+                value={attendanceDate}
+                onChange={(e) => setAttendanceDate(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>{lang === 'ru' ? 'План (часов):' : 'Rejalashtirilgan (soat):'}</label>
+                <input
+                  type="number"
+                  className="ctrl-input"
+                  required
+                  value={plannedHours}
+                  onChange={(e) => setPlannedHours(e.target.value)}
+                />
+              </div>
+
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>{lang === 'ru' ? 'Факт (часов):' : 'Haqiqiy ishlagan (soat):'}</label>
+                <input
+                  type="number"
+                  className="ctrl-input"
+                  required
+                  value={actualHours}
+                  onChange={(e) => setActualHours(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>{lang === 'ru' ? 'Статус:' : 'Status:'}</label>
+              <select
+                className="ctrl-input"
+                value={attendanceStatus}
+                onChange={(e) => setAttendanceStatus(e.target.value)}
+              >
+                <option value="Ishda">{lang === 'ru' ? 'В работе (Ishda)' : 'Ishda'}</option>
+                <option value="Kelmadi">{lang === 'ru' ? 'Не явился (Kelmadi)' : 'Kelmadi'}</option>
+                <option value="Kasal">{lang === 'ru' ? 'Болен (Kasal)' : 'Kasal'}</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>{lang === 'ru' ? 'Начало смены:' : 'Kelgan vaqti (Boshlanish):'}</label>
+                <input
+                  type="time"
+                  className="ctrl-input"
+                  value={checkIn}
+                  onChange={(e) => setCheckIn(e.target.value)}
+                />
+              </div>
+
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>{lang === 'ru' ? 'Конец смены:' : 'Ketgan vaqti (Tugash):'}</label>
+                <input
+                  type="time"
+                  className="ctrl-input"
+                  value={checkOut}
+                  onChange={(e) => setCheckOut(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button type="button" className="modal-btn cancel-btn" onClick={() => setModalOpen(false)}>
+                {t('btnCancel')}
+              </button>
+              <button type="submit" disabled={saveLoading} className="modal-btn save primary-btn">
+                {saveLoading ? '...' : t('btnSave')}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

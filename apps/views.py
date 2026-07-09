@@ -142,26 +142,43 @@ class WorkAttendanceViewSet(ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        year = self.request.query_params.get("year")
+        # Agar parametr kelmasa, joriy yil va oyni default qilib olamiz
+        year = self.request.query_params.get("year", timezone.now().year)
         month = self.request.query_params.get("month")
+
         if year:
             queryset = queryset.filter(date__year=year)
+
         if month is not None and month != "":
             try:
-                # Convert 0-indexed month from frontend to 1-indexed for Django
+                # Agar frontend 0-indexed yuborayotgan bo'lsa (Iyun = 5) -> unga 1 qo'shib 6 qiladi
                 django_month = int(month) + 1
                 queryset = queryset.filter(date__month=django_month)
             except ValueError:
                 pass
+        else:
+            # Agar frontend oy yubormasa, joriy oyni filtrlaydi
+            queryset = queryset.filter(date__month=timezone.now().month)
+
         return queryset
 
     @action(detail=False, methods=["get"], url_path="monthly_report")
     def monthly_report(self, request):
         year = request.query_params.get("year", timezone.now().year)
-        month = request.query_params.get("month", timezone.now().month)
-        attendances = WorkAttendance.objects.filter(date__year=year, date__month=month)
+        month = request.query_params.get("month")
+
+        # Bu yerda ham oy nazorati
+        if month is not None and month != "":
+            django_month = int(month) + 1
+        else:
+            django_month = timezone.now().month
+
+        attendances = WorkAttendance.objects.filter(
+            date__year=year, date__month=django_month
+        )
         serializer = self.get_serializer(attendances, many=True)
         return Response(serializer.data)
+
 
 # ==========================================
 # 6. Salary (Oylik Maosh) ViewSet
@@ -178,40 +195,43 @@ class SalaryViewSet(ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        year = self.request.query_params.get("year")
+        year = self.request.query_params.get("year", timezone.now().year)
         month = self.request.query_params.get("month")
 
         if year:
             queryset = queryset.filter(year=year)
+
         if month is not None and month != "":
             try:
-                # Фронтенддан келган 0-indexed ойни (Июн=5) бэкенд учун 1-indexed (Июн=6) га ўгирамиз
                 django_month = int(month) + 1
                 queryset = queryset.filter(month=django_month)
             except ValueError:
                 pass
+        else:
+            queryset = queryset.filter(month=timezone.now().month)
+
         return queryset
 
     @action(detail=False, methods=["get"], url_path="filter_salary")
     def filter_salary(self, request):
-        year = request.query_params.get("year")
+        year = request.query_params.get("year", timezone.now().year)
         month = request.query_params.get("month")
 
         queryset = Salary.objects.all()
         if year:
             queryset = queryset.filter(year=year)
+
         if month is not None and month != "":
             try:
-                # Бу ерда ҳам фронтенд ой форматини тўғрилаймиз
                 django_month = int(month) + 1
                 queryset = queryset.filter(month=django_month)
             except ValueError:
                 pass
+        else:
+            queryset = queryset.filter(month=timezone.now().month)
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-
-
 # ==========================================
 # 7. TechnicalStatus (Texnik Holat) ViewSet
 # ==========================================
@@ -239,12 +259,11 @@ class MaintenanceScheduleViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="upcoming")
     def upcoming_maintenance(self, request):
-        upcoming = MaintenanceSchedule.objects.filter(days_remaining__lte=7).order_by(
+        upcoming = MaintenanceSchedule.objects.filter(days_remaining__exact=7).order_by(
             "days_remaining"
         )
         serializer = self.get_serializer(upcoming, many=True)
         return Response(serializer.data)
-
 
 # ==========================================
 # 9. Auth Views (Login & Register)

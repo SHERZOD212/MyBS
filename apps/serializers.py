@@ -1,7 +1,14 @@
 from datetime import date
 from django.contrib.auth import get_user_model, authenticate
+from django.db.models.fields import IntegerField
+from django.forms.fields import TimeField
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import SerializerMethodField, CharField
+from rest_framework.fields import (
+    SerializerMethodField,
+    CharField,
+    TimeField,
+    IntegerField,
+)
 from rest_framework.serializers import ModelSerializer, Serializer
 from django.contrib.auth.password_validation import validate_password
 
@@ -131,24 +138,32 @@ class FineDetailSerializer(ModelSerializer):
         model = Fine
         fields = "__all__"
 
-
 # ==========================================
 # 5. WorkAttendance (Ish Vaqti) Serializers
 # ==========================================
+
 class WorkAttendanceSerializer(ModelSerializer):
     driver_display = CharField(source="driver.name", read_only=True)
-    check_in = SerializerMethodField()
-    check_out = SerializerMethodField()
+
+    check_in = TimeField(
+        format="%H:%M",
+        input_formats=["%H:%M", "%H:%M:%S"],
+        required=False,
+        allow_null=True,
+    )
+
+    check_out = TimeField(
+        format="%H:%M",
+        input_formats=["%H:%M", "%H:%M:%S"],
+        required=False,
+        allow_null=True,
+    )
+
+    working_hours = IntegerField(source="actual_hours", read_only=True)
 
     class Meta:
         model = WorkAttendance
         fields = "__all__"
-
-    def get_check_in(self, obj):
-        return obj.check_in.strftime("%H:%M") if obj.check_in else "06:00"
-
-    def get_check_out(self, obj):
-        return obj.check_out.strftime("%H:%M") if obj.check_out else "22:30"
 
     def validate(self, attrs):
         actual = attrs.get("actual_hours", 0)
@@ -157,11 +172,7 @@ class WorkAttendanceSerializer(ModelSerializer):
         if actual < 0 or planned < 0:
             raise ValidationError("Ish soatlari manfiy bo'lishi mumkin emas!")
 
-        # Ortiqcha ishlangan vaqtni avtomatik hisoblash
-        if actual > planned:
-            attrs["overtime_hours"] = actual - planned
-        else:
-            attrs["overtime_hours"] = 0
+        attrs["overtime_hours"] = max(0, actual - planned)
 
         return attrs
 
@@ -169,20 +180,37 @@ class WorkAttendanceSerializer(ModelSerializer):
 class WorkAttendanceDetailSerializer(ModelSerializer):
     driver = DriverDetailSerializer(read_only=True)
     driver_display = CharField(source="driver.name", read_only=True)
-    check_in = SerializerMethodField()
-    check_out = SerializerMethodField()
+
+    check_in = TimeField(
+        format="%H:%M",
+        input_formats=["%H:%M", "%H:%M:%S"],
+        required=False,
+        allow_null=True,
+    )
+
+    check_out = TimeField(
+        format="%H:%M",
+        input_formats=["%H:%M", "%H:%M:%S"],
+        required=False,
+        allow_null=True,
+    )
+
+    working_hours = IntegerField(source="actual_hours", read_only=True)
 
     class Meta:
         model = WorkAttendance
         fields = "__all__"
 
-    def get_check_in(self, obj):
-        return obj.check_in.strftime("%H:%M") if obj.check_in else "06:00"
+    def validate(self, attrs):
+        actual = attrs.get("actual_hours", 0)
+        planned = attrs.get("planned_hours", 8)
 
-    def get_check_out(self, obj):
-        return obj.check_out.strftime("%H:%M") if obj.check_out else "22:30"
+        if actual < 0 or planned < 0:
+            raise ValidationError("Ish soatlari manfiy bo'lishi mumkin emas!")
 
+        attrs["overtime_hours"] = max(0, actual - planned)
 
+        return attrs
 # ==========================================
 # 6. Salary (Oylik Maosh) Serializers
 # ==========================================
@@ -194,26 +222,46 @@ class SalarySerializer(ModelSerializer):
         fields = "__all__"
 
     def to_internal_value(self, data):
-        """
-        Фронтенддан келаётган 0-11 форматдаги ойни (Июн=5)
-        базага ёзишдан олдин 1-12 форматга (Июн=6) ўгиради.
-        """
+        # Nusxa olamiz, chunki QueryDict/dict obyektini bevosita o'zgartirish xato berishi mumkin
+        data = data.copy()
         if "month" in data and data["month"] is not None and data["month"] != "":
             try:
+                # Frontend 0-11 formatda yuborsa, bazaga 1-12 formatda yozish uchun +1 qo'shamiz
                 data["month"] = int(data["month"]) + 1
             except ValueError:
                 pass
         return super().to_internal_value(data)
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Frontend ma'lumotni o'qiyotganda (GET), unga tushunarli bo'lishi uchun qaytarib 0-indexed qilamiz (-1)
+        if "month" in ret and ret["month"] is not None:
+            ret["month"] = ret["month"] - 1
+        return ret
+
     def validate(self, attrs):
         fixed = attrs.get("fixed_salary", 0)
         bonus = attrs.get("bonus", 0)
-        fines = attrs.get("fines_deduction", 0)
+        driver = attrs.get("driver")
+        year = attrs.get("year")
+        month = attrs.get("month")
+
+        if driver and year and month:
+            from django.db.models import Sum
+            fines_sum = Fine.objects.filter(
+                driver=driver,
+                date__year=year,
+                date__month=month
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            attrs["fines_deduction"] = fines_sum
+        else:
+            attrs["fines_deduction"] = attrs.get("fines_deduction", 0)
+
+        fines = attrs["fines_deduction"]
 
         if fixed < 0 or bonus < 0 or fines < 0:
             raise ValidationError("Moliyaviy qiymatlar manfiy bo'lishi mumkin emas!")
 
-        # Qo'lga tegadigan jami summani avtomatik hisoblash
         attrs["total_paid"] = max(0, (fixed + bonus) - fines)
         return attrs
 
@@ -227,17 +275,19 @@ class SalaryDetailSerializer(ModelSerializer):
         model = Salary
         fields = "__all__"
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Detail serializerda ham frontend adashmasligi uchun oyni 0-indexed qilib qaytaramiz
+        if "month" in ret and ret["month"] is not None:
+            ret["month"] = ret["month"] - 1
+        return ret
+
     def get_month_display(self, obj):
-        """
-        Базадаги 1-12 форматдаги ойни (6) рўйхатдан тўғри топиш
-        учун 1 ни айириб индекслаймиз (6 - 1 = 5 -> 'Iyun').
-        """
         months = [
             "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
             "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
         ]
         try:
-            # Жадвалда ой номи тўғри чиқиши учун -1 қиламиз
             return months[obj.month - 1]
         except (IndexError, TypeError, ValueError):
             return f"{obj.month}-oy"
