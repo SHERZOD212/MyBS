@@ -29,6 +29,8 @@ export default function WorkingHours() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [attendanceBusId, setAttendanceBusId] = useState('');
+  const [attendanceSchedule, setAttendanceSchedule] = useState<'even' | 'odd'>('even');
   const [attendanceDate, setAttendanceDate] = useState('');
   const [plannedHours, setPlannedHours] = useState('8');
   const [actualHours, setActualHours] = useState('8');
@@ -68,6 +70,16 @@ export default function WorkingHours() {
       setStartTime('06:00');
       setEndTime('18:00');
     }
+    const drv = drivers.find((d) => d.id === driverId);
+    if (drv) {
+      const busObj = drv.bus && typeof drv.bus === 'object' ? drv.bus : null;
+      const busId = busObj ? busObj.id : (drv.bus || '');
+      setDriverBusId(busId ? String(busId) : '');
+      setDriverSchedule(drv.schedule || 'even');
+    } else {
+      setDriverBusId('');
+      setDriverSchedule('even');
+    }
   };
 
   const handleSaveShift = async () => {
@@ -76,6 +88,8 @@ export default function WorkingHours() {
     try {
       const response = await api.patch(`/drivers/${editingDriverId}/`, {
         shift: `${startTime} - ${endTime}`,
+        bus: driverBusId ? parseInt(driverBusId) : null,
+        schedule: driverSchedule,
       });
       if (response.status === 200) {
         await refreshDrivers();
@@ -93,7 +107,20 @@ export default function WorkingHours() {
   // CRUD for work attendance
   const handleOpenAdd = () => {
     setEditingId(null);
-    setSelectedDriverId(drivers.length > 0 ? String(drivers[0].id) : '');
+    const initialDriver = drivers.length > 0 ? drivers[0] : null;
+    const initialDriverIdStr = initialDriver ? String(initialDriver.id) : '';
+    setSelectedDriverId(initialDriverIdStr);
+
+    if (initialDriver) {
+      const busObj = initialDriver.bus && typeof initialDriver.bus === 'object' ? initialDriver.bus : null;
+      const busId = busObj ? busObj.id : (initialDriver.bus || '');
+      setAttendanceBusId(busId ? String(busId) : '');
+      setAttendanceSchedule(initialDriver.schedule || 'even');
+    } else {
+      setAttendanceBusId('');
+      setAttendanceSchedule('even');
+    }
+
     setAttendanceDate(new Date().toISOString().split('T')[0]);
     setPlannedHours('8');
     setActualHours('8');
@@ -105,8 +132,21 @@ export default function WorkingHours() {
 
   const handleOpenEdit = (att: WorkAttendance) => {
     setEditingId(att.id);
-    const driverId = typeof att.driver === 'object' && att.driver !== null ? att.driver.id : att.driver;
+    const driverObj = typeof att.driver === 'object' && att.driver !== null ? att.driver : null;
+    const driverId = driverObj ? driverObj.id : att.driver;
     setSelectedDriverId(String(driverId));
+
+    const drv = drivers.find((d) => d.id === driverId);
+    if (drv) {
+      const busObj = drv.bus && typeof drv.bus === 'object' ? drv.bus : null;
+      const busId = busObj ? busObj.id : (drv.bus || '');
+      setAttendanceBusId(busId ? String(busId) : '');
+      setAttendanceSchedule(drv.schedule || 'even');
+    } else {
+      setAttendanceBusId('');
+      setAttendanceSchedule('even');
+    }
+
     setAttendanceDate(att.date);
     setPlannedHours(String(att.planned_hours));
     setActualHours(String(att.actual_hours));
@@ -114,6 +154,28 @@ export default function WorkingHours() {
     setCheckIn(att.check_in || '06:00');
     setCheckOut(att.check_out || '22:30');
     setModalOpen(true);
+  };
+
+  const handleDriverChange = (driverIdStr: string) => {
+    setSelectedDriverId(driverIdStr);
+    const drv = drivers.find((d) => String(d.id) === driverIdStr);
+    if (drv) {
+      const busObj = drv.bus && typeof drv.bus === 'object' ? drv.bus : null;
+      const busId = busObj ? busObj.id : (drv.bus || '');
+      setAttendanceBusId(busId ? String(busId) : '');
+      setAttendanceSchedule(drv.schedule || 'even');
+      
+      // Auto-prefill check-in/out times from driver's default shift if available
+      if (drv.shift_start) {
+        setCheckIn(drv.shift_start.substring(0, 5));
+      }
+      if (drv.shift_end) {
+        setCheckOut(drv.shift_end.substring(0, 5));
+      }
+    } else {
+      setAttendanceBusId('');
+      setAttendanceSchedule('even');
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -124,6 +186,18 @@ export default function WorkingHours() {
     }
 
     setSaveLoading(true);
+
+    // Save driver's bus and schedule assignment first
+    try {
+      await api.patch(`/drivers/${selectedDriverId}/`, {
+        bus: attendanceBusId ? parseInt(attendanceBusId) : null,
+        schedule: attendanceSchedule,
+      });
+      await refreshDrivers();
+    } catch (err) {
+      console.error('Failed to auto-assign bus/schedule to driver during attendance save', err);
+    }
+
     const payload = {
       driver: parseInt(selectedDriverId),
       date: attendanceDate,
@@ -395,6 +469,36 @@ export default function WorkingHours() {
           title={lang === 'ru' ? 'Изменить рейс (Смену)' : 'Reysni oʻzgartirish (Smena)'}
           onClose={() => setEditingDriverId(null)}
         >
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
+            <div className="input-group" style={{ flex: 1 }}>
+              <label>{lang === 'ru' ? 'Автобус:' : 'Avtobus:'}</label>
+              <select
+                className="ctrl-input"
+                value={driverBusId}
+                onChange={(e) => setDriverBusId(e.target.value)}
+              >
+                <option value="">{lang === 'ru' ? 'Не выбран' : 'Tanlanmagan'}</option>
+                {buses?.map((b: any) => (
+                  <option key={b.id} value={b.id}>
+                    {b.num} ({b.route})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="input-group" style={{ flex: 1 }}>
+              <label>{lang === 'ru' ? 'График:' : 'Grafik:'}</label>
+              <select
+                className="ctrl-input"
+                value={driverSchedule}
+                onChange={(e) => setDriverSchedule(e.target.value as any)}
+              >
+                <option value="even">{lang === 'ru' ? 'Четные дни' : 'Juft kunlar'}</option>
+                <option value="odd">{lang === 'ru' ? 'Нечетные дни' : 'Toq kunlar'}</option>
+              </select>
+            </div>
+          </div>
+
           <div className="time-range-group">
             <div className="input-group">
               <label>{lang === 'ru' ? 'Время начала:' : 'Boshlanish vaqti:'}</label>
@@ -447,12 +551,12 @@ export default function WorkingHours() {
                 className="ctrl-input"
                 required
                 value={selectedDriverId}
-                onChange={(e) => setSelectedDriverId(e.target.value)}
+                onChange={(e) => handleDriverChange(e.target.value)}
               >
                 {drivers.map((d) => {
                   const busObj = d.bus && typeof d.bus === 'object' ? d.bus : null;
                   const busNum = busObj ? busObj.num : 'Navbatchi';
-                  const scheduleText = d.schedule === 'even' ? (lang === 'ru' ? 'Чет' : 'Juft') : (lang === 'ru' ? 'Нечет' : 'Toq');
+                  const scheduleText = d.schedule === 'even' ? (lang === 'ru' ? 'Чет' : 'Juft') : (lang === 'ru' ? 'Неchet' : 'Toq');
                   return (
                     <option key={d.id} value={d.id}>
                       {d.name} ({busNum} - {scheduleText})
@@ -460,6 +564,36 @@ export default function WorkingHours() {
                   );
                 })}
               </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>{lang === 'ru' ? 'Автобус:' : 'Avtobus:'}</label>
+                <select
+                  className="ctrl-input"
+                  value={attendanceBusId}
+                  onChange={(e) => setAttendanceBusId(e.target.value)}
+                >
+                  <option value="">{lang === 'ru' ? 'Не выбран' : 'Tanlanmagan'}</option>
+                  {buses?.map((b: any) => (
+                    <option key={b.id} value={b.id}>
+                      {b.num} ({b.route})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>{lang === 'ru' ? 'График:' : 'Grafik:'}</label>
+                <select
+                  className="ctrl-input"
+                  value={attendanceSchedule}
+                  onChange={(e) => setAttendanceSchedule(e.target.value as any)}
+                >
+                  <option value="even">{lang === 'ru' ? 'Четные дни' : 'Juft kunlar'}</option>
+                  <option value="odd">{lang === 'ru' ? 'Нечетные дни' : 'Toq kunlar'}</option>
+                </select>
+              </div>
             </div>
 
             <div className="input-group">

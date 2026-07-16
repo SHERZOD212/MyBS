@@ -1,41 +1,40 @@
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from django.utils import timezone
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
     Bus,
-    Driver,
     DailyTripLog,
-    TechnicalStatus,
-    MaintenanceSchedule,
+    Driver,
     Fine,
-    WorkAttendance,
+    MaintenanceSchedule,
     Salary,
+    TechnicalStatus,
+    WorkAttendance,
 )
 from .serializers import (
     BusSerializer,
-    DriverSerializer,
-    DriverDetailSerializer,
-    DailyTripLogSerializer,
     DailyTripLogDetailSerializer,
-    TechnicalStatusSerializer,
-    MaintenanceScheduleSerializer,
-    FineSerializer,
+    DailyTripLogSerializer,
+    DriverDetailSerializer,
+    DriverSerializer,
     FineDetailSerializer,
-    WorkAttendanceSerializer,
-    WorkAttendanceDetailSerializer,
-    SalarySerializer,
-    SalaryDetailSerializer,
+    FineSerializer,
     LoginSerializer,
+    MaintenanceScheduleSerializer,
     RegisterSerializer,
+    SalaryDetailSerializer,
+    SalarySerializer,
+    TechnicalStatusSerializer,
+    WorkAttendanceDetailSerializer,
+    WorkAttendanceSerializer,
 )
-
-from rest_framework_simplejwt.tokens import RefreshToken
 
 
 # ==========================================
@@ -142,41 +141,39 @@ class WorkAttendanceViewSet(ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        # Agar parametr kelmasa, joriy yil va oyni default qilib olamiz
-        year = self.request.query_params.get("year", timezone.now().year)
-        month = self.request.query_params.get("month")
 
-        if year:
+        # Query parametrlardan yil va oyni olish
+        year_param = self.request.query_params.get("year")
+        month_param = self.request.query_params.get("month")
+
+        # 1. Yil bo'yicha filterlash (agar noto'g'ri bo'lsa, joriy yil olinadi)
+        try:
+            year = int(year_param) if year_param else timezone.now().year
+            queryset = queryset.filter(date__year=year)
+        except ValueError:
+            year = timezone.now().year
             queryset = queryset.filter(date__year=year)
 
-        if month is not None and month != "":
+        # 2. Oy bo'yicha filterlash
+        if month_param is not None and month_param != "":
             try:
                 # Agar frontend 0-indexed yuborayotgan bo'lsa (Iyun = 5) -> unga 1 qo'shib 6 qiladi
-                django_month = int(month) + 1
-                queryset = queryset.filter(date__month=django_month)
+                django_month = int(month_param) + 1
+                if 1 <= django_month <= 12:
+                    queryset = queryset.filter(date__month=django_month)
             except ValueError:
                 pass
         else:
-            # Agar frontend oy yubormasa, joriy oyni filtrlaydi
+            # Agar frontend oy yubormasa, joriy oy bo'yicha filterlaydi
             queryset = queryset.filter(date__month=timezone.now().month)
 
         return queryset
 
     @action(detail=False, methods=["get"], url_path="monthly_report")
     def monthly_report(self, request):
-        year = request.query_params.get("year", timezone.now().year)
-        month = request.query_params.get("month")
-
-        # Bu yerda ham oy nazorati
-        if month is not None and month != "":
-            django_month = int(month) + 1
-        else:
-            django_month = timezone.now().month
-
-        attendances = WorkAttendance.objects.filter(
-            date__year=year, date__month=django_month
-        )
-        serializer = self.get_serializer(attendances, many=True)
+        # dynamic get_queryset orqali filterlangan ma'lumotlarni qaytaramiz
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
 
@@ -195,43 +192,42 @@ class SalaryViewSet(ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        year = self.request.query_params.get("year", timezone.now().year)
-        month = self.request.query_params.get("month")
 
-        if year:
+        # Query parametrlardan yil va oyni olish
+        year_param = self.request.query_params.get("year")
+        month_param = self.request.query_params.get("month")
+
+        # 1. Yil bo'yicha filterlash (agar xato bo'lsa joriy yil olinadi)
+        try:
+            year = int(year_param) if year_param else timezone.now().year
+            queryset = queryset.filter(year=year)
+        except ValueError:
+            year = timezone.now().year
             queryset = queryset.filter(year=year)
 
-        if month is not None and month != "":
+        # 2. Oy bo'yicha filterlash
+        if month_param is not None and month_param != "":
             try:
-                django_month = int(month) + 1
-                queryset = queryset.filter(month=django_month)
+                # Frontend 0-indexed yuborayotgan bo'lsa (0 = Yanvar) -> +1 qo'shamiz
+                django_month = int(month_param) + 1
+                if 1 <= django_month <= 12:
+                    queryset = queryset.filter(month=django_month)
             except ValueError:
                 pass
         else:
+            # Oy berilmagan bo'lsa joriy oydan filterlaydi
             queryset = queryset.filter(month=timezone.now().month)
 
         return queryset
 
     @action(detail=False, methods=["get"], url_path="filter_salary")
     def filter_salary(self, request):
-        year = request.query_params.get("year", timezone.now().year)
-        month = request.query_params.get("month")
-
-        queryset = Salary.objects.all()
-        if year:
-            queryset = queryset.filter(year=year)
-
-        if month is not None and month != "":
-            try:
-                django_month = int(month) + 1
-                queryset = queryset.filter(month=django_month)
-            except ValueError:
-                pass
-        else:
-            queryset = queryset.filter(month=timezone.now().month)
-
+        # dynamic get_queryset filteridan foydalanamiz
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
 # ==========================================
 # 7. TechnicalStatus (Texnik Holat) ViewSet
 # ==========================================
@@ -264,6 +260,7 @@ class MaintenanceScheduleViewSet(ModelViewSet):
         )
         serializer = self.get_serializer(upcoming, many=True)
         return Response(serializer.data)
+
 
 # ==========================================
 # 9. Auth Views (Login & Register)

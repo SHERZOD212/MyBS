@@ -2,7 +2,7 @@ import os
 import os.path
 from pathlib import Path
 from dotenv import load_dotenv
-
+from datetime import timedelta
 load_dotenv(".env")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,6 +16,11 @@ DEBUG = True
 ALLOWED_HOSTS = ["0.0.0.0", "127.0.0.1", "localhost"]
 
 
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+}
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

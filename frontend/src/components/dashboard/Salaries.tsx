@@ -177,6 +177,11 @@ export default function Salaries() {
     { value: '11', label: { ru: 'Декабрь', uz: 'Dekabr' } },
   ];
 
+  const calculatedTotal = Math.max(
+    0,
+    parseFloat(fixedSalary || '0') + parseFloat(bonus || '0') - parseFloat(finesDeduction || '0')
+  );
+
   return (
     <div>
       <div className="page-header">
@@ -269,12 +274,12 @@ export default function Salaries() {
                       <td>
                         <strong>{driverName}</strong>
                       </td>
-                      <td>{parseInt(salary.fixed_salary || '4000000').toLocaleString()} sum</td>
+                      <td>{parseFloat(salary.fixed_salary ?? '4000000').toLocaleString()} sum</td>
                       <td style={{ color: 'var(--red)', fontWeight: 500 }}>
-                        -{parseInt(salary.fines_deduction || '0').toLocaleString()} sum
+                        -{parseFloat(salary.fines_deduction ?? '0').toLocaleString()} sum
                       </td>
                       <td style={{ color: 'var(--green)', fontWeight: '700' }}>
-                        {parseInt(salary.total_paid || '4000000').toLocaleString()} sum
+                        {parseFloat(salary.total_paid ?? '4000000').toLocaleString()} sum
                       </td>
                       <td className="actions-cell" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                         <button
@@ -394,12 +399,27 @@ export default function Salaries() {
                   type="number"
                   className="ctrl-input"
                   value={finesDeduction}
-                  onChange={(e) => setFinesDeduction(e.target.value)}
+                  disabled
+                  style={{ background: 'var(--bg-light)', cursor: 'not-allowed' }}
                 />
                 <span style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px', display: 'block' }}>
                   {lang === 'ru' ? 'Сумма штрафов за месяц (авторасчет)' : 'Oy uchun jami jarimalar (avto-hisob)'}
                 </span>
               </div>
+            </div>
+
+            <div className="input-group" style={{ marginTop: '16px', padding: '12px', background: 'rgba(0, 200, 83, 0.05)', borderRadius: '6px', border: '1px dashed var(--green)' }}>
+              <label style={{ fontWeight: 'bold', color: 'var(--green)', margin: 0 }}>
+                {lang === 'ru' ? 'Итого к выдаче (Авторасчет):' : 'Jami toʻlanadigan (Avto-hisob):'}
+              </label>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--green)', marginTop: '4px' }}>
+                {calculatedTotal.toLocaleString()} sum
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px', display: 'block' }}>
+                {lang === 'ru' 
+                  ? 'Формула: Оклад - Штрафы + Бонус' 
+                  : 'Formula: Kafolatlangan oylik - Jarimalar + Mukofot'}
+              </span>
             </div>
 
             <div className="modal-actions">

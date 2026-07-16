@@ -219,7 +219,8 @@ class SalarySerializer(ModelSerializer):
 
     class Meta:
         model = Salary
-        fields = "__all__"
+        # fields = "__all__"
+        exclude = 'total_paid',
 
     def to_internal_value(self, data):
         # Nusxa olamiz, chunki QueryDict/dict obyektini bevosita o'zgartirish xato berishi mumkin
